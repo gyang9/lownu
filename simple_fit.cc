@@ -176,12 +176,20 @@ std::vector<TH1D*> Sterile:: preparePrediction(RooListProxy* _pulls, bool Iosc) 
   predictionList.push_back(predDYB);
   predictionList.push_back(predRENO);
   predictionList.push_back(predNEOS);
-*/
   predictionList.push_back(fpredDC);
   predictionList.push_back(fpredDYB);
   predictionList.push_back(fpredRENO);
   predictionList.push_back(fpredNEOS);
   predictionList.push_back(fpredPROS);
+*/
+  predNuE = predNuE + ((RooAbsReal*)_pulls->at(i+12))->getVal() * ND_numubar_RHC* predNuE;
+  predictionList.push_back(predNuE);
+
+  //for (std::vector<TH1D*>::iterator pred = predictionList.begin();
+  //        pred != predictionList.end()
+  //        pred++) {
+  //    *pred = pred + ((RooAbsReal*)_pulls->at(i+12))->getVal()* 
+  //}
 
   //std::cout<<"************* before folding "<<predPROS->Integral()<<std::endl;
   //TH1D* temp(predPROS);
