@@ -182,7 +182,14 @@ std::vector<TH1D*> Sterile:: preparePrediction(RooListProxy* _pulls, bool Iosc) 
   predictionList.push_back(fpredNEOS);
   predictionList.push_back(fpredPROS);
 */
-  predNuE = predNuE + ((RooAbsReal*)_pulls->at(i+12))->getVal() * ND_numubar_RHC* predNuE;
+  float receNuE;
+  TFile file("");
+  TTree* tree = (TTree*)file->Get("tree");
+  tree->SetBranchAddress("recoNeutrinoE", &receNuE);
+  TH1F predNuE("","",16,0,8);
+  for (int i = 0; i < tree->GetEntries(); i++) {
+      predNuE.Fill(recoNuE + ((RooAbsReal*)_pulls->at(i+12))->getVal() * ND_numubar_RHC* recoNuE);
+  }
   predictionList.push_back(predNuE);
 
   //for (std::vector<TH1D*>::iterator pred = predictionList.begin();
