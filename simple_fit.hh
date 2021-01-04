@@ -336,10 +336,14 @@ using namespace RooFit;
     TGraph* GetIBDXsecPoints() const;
     std::vector<TH1D*> GetFluxPrediction(RooListProxy* _pulls, bool Iosc) ;
 
-    std::vector<TMatrixD*> ConversionMatrix(TString inputFile, TString inputTree);
-    TH2D* GetConversionHist() const {return fHist[0];}//need
-    std::vector<TMatrixD*> GetConversionMatrix() const {return fMatrix;}//need
-    TH1D* folding(TH1D* input, int something) const;
+    //std::vector<TMatrixD*> ConversionMatrix(TString inputFile, TString inputTree);
+    TMatrixD* ConversionMatrix(TString inputFile, TString inputTree);
+    //TH2D* GetConversionHist() const {return fHist[0];}//need
+    TH2D* GetConversionHist() const {return fHist;}//need
+    //std::vector<TMatrixD*> GetConversionMatrix() const {return fMatrix;}//need
+    TMatrixD* GetConversionMatrix() const {return fMatrix;}//need
+    //TH1D* folding(TH1D* input, int something) const;
+    TH1D* folding(TH1D* input) const;
     TVectorD* getTestVec();//May,20,2020
     Double_t getScaling4();//June,3,2020
     void fitSingleExp(TString input);
@@ -354,26 +358,29 @@ using namespace RooFit;
     void setEShiftHist(TString file);
     bool getIfEShiftHist();
 
-    TH2D* fHist[5];
-    TH2D* fHist_DC;
-    TH2D* fHist_DYB;
-    TH2D* fHist_RENO;
-    TH2D* fHist_NEOS;
-    TH2D* fHist_PROS;
+    //TH2D* fHist[5];
+    TH2D* fHist;
+    //TH2D* fHist_DC;
+    //TH2D* fHist_DYB;
+    //TH2D* fHist_RENO;
+    //TH2D* fHist_NEOS;
+    //TH2D* fHist_PROS;
 
-    std::vector<TMatrixD*> fMatrix;
-    TMatrixD* fMatrix_DC;
-    TMatrixD* fMatrix_DYB;
-    TMatrixD* fMatrix_RENO;
-    TMatrixD* fMatrix_NEOS;
-    TMatrixD* fMatrix_PROS;
+    //std::vector<TMatrixD*> fMatrix;
+    TMatrixD* fMatrix;
+    //TMatrixD* fMatrix_DC;
+    //TMatrixD* fMatrix_DYB;
+    //TMatrixD* fMatrix_RENO;
+    //TMatrixD* fMatrix_NEOS;
+    //TMatrixD* fMatrix_PROS;
 
-    std::vector<TMatrixD*> uMatrix;
-    TMatrixD* uMatrix_DC;
-    TMatrixD* uMatrix_DYB;
-    TMatrixD* uMatrix_RENO;
-    TMatrixD* uMatrix_NEOS;
-    TMatrixD* uMatrix_PROS;
+    //std::vector<TMatrixD*> uMatrix;
+    TMatrixD* uMatrix;
+    //TMatrixD* uMatrix_DC;
+    //TMatrixD* uMatrix_DYB;
+    //TMatrixD* uMatrix_RENO;
+    //TMatrixD* uMatrix_NEOS;
+    //TMatrixD* uMatrix_PROS;
 
     TMatrixD* unfoldingMatrix;
 

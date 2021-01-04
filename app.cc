@@ -1,4 +1,4 @@
-#include "simple_t2k.hh"
+#include "simple_fit.hh"
 #include "TMath.h"
 
 #include "RooArgList.h"
@@ -46,7 +46,7 @@ int main(int argc, char**argv){
 
  rep->SetBinning(binHist);
 
- rep->SetMatrixNameDC(fileLocation+"tbd");
+ rep->SetMatrixNameDC(fileLocation+"variableOutput.root");
  std::vector<TH1D*> tempPredList = rep->preparePrediction(rep->getPullList(), false);
  rep->prepareData(rep->preparePrediction(rep->getPullList(), false));
 
