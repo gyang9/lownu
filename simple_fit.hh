@@ -152,6 +152,7 @@ using namespace RooFit;
 
     std::vector<TH1D*> prepareData(std::vector<TH1D*> tempPredLis) const;
     //std::vector<TH1D*> preparePrediction(RooListProxy* _pulls) const;
+    //std::vector<std::vector<float>> preparePrediction(RooListProxy* _pulls, bool Iosc ) const;
     std::vector<TH1D*> preparePrediction(RooListProxy* _pulls, bool Iosc ) const;
     std::vector<double> wonseokPreparePrediction;//(RooListProxy* _pulls, bool Iosc ) const;//May,20,2020
     //std::vector<TH1D*> preparePrediction(RooListProxy* _pulls, std::vector<TString> modelList) const;
@@ -330,6 +331,7 @@ using namespace RooFit;
     RooArgList _parlist;
     RooListProxy* _pulls;
 
+    //std::vector<std::vector<float>> GetCurrentPrediction(); //혹시 이것때문에 출력은 절대 아닐 텐데...
     std::vector<TH1D*> GetCurrentPrediction(); //혹시 이것때문에 출력은 절대 아닐 텐데...
     std::vector<TH1D*> GetCurrentData(std::vector<TH1D*> pred);
     
