@@ -111,7 +111,7 @@ Double_t Lownu ::FillEv( RooListProxy* _pulls ) const
     }
 
     for(Int_t i=0;i<nBins;i++){	 
-        //(*fVec)[i]               = predDC->GetBinContent(i+1) ; //* this->surv_Prob( (thisE) , _pulls, 400)  ;
+        (*fVec)[i]               = predDC->GetBinContent(i+1) ; //* this->surv_Prob( (thisE) , _pulls, 400)  ;
         tempVec[0] -> SetBinContent(i+1, (*fVec)[i]);
     }
     for(Int_t i=0;i<nBins;i++){
