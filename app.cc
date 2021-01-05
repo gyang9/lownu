@@ -18,7 +18,7 @@ using namespace std;
 int main(int argc, char**argv){
 
  RooFitResult* res;
- Sterile * rep = new Sterile ("_rep");
+ Lownu * rep = new Lownu ("_rep");
    char formula[10];
 
  std::cout<<"start to run "<<std::endl;
@@ -31,7 +31,7 @@ int main(int argc, char**argv){
  vecInput1 ->SetBinContent(1, 1);
  vecInput2 ->SetBinContent(1, 1);
 
- std::cout<<"'ve set some inputs "<<std::endl;
+ std::cout<<"you've set some inputs "<<std::endl;
 
  // binned from 0.5-9 MeV with bin width of 0.25 MeV
  int nBins = 30;
@@ -46,7 +46,7 @@ int main(int argc, char**argv){
 
  rep->SetBinning(binHist);
 
- rep->SetMatrixNameDC(fileLocation+"variableOutput.root");
+ rep->SetInputName(fileLocation+"variableOutput.root");
  std::vector<TH1D*> tempPredList = rep->preparePrediction(rep->getPullList(), false);
  rep->prepareData(rep->preparePrediction(rep->getPullList(), false));
 
@@ -64,8 +64,8 @@ int main(int argc, char**argv){
  // ******************************** Important setup here *************************************
  // *******************************************************************************************
  rep->setSysts(false);
- rep->ifEShiftHist(true);
- rep->setEShiftHist("Escalefraction.root");
+ //rep->ifEShiftHist(true);
+ //rep->setEShiftHist("Escalefraction.root");
  // *******************************************************************************************
  // ******************************************************************************************* 
 
@@ -78,11 +78,16 @@ int main(int argc, char**argv){
 
  // save the un-oscillated standard prediction and data spectra
  TFile* outputFile = new TFile("outputFigs.root","RECREATE");
+ std::cout<<"outPrediction size: "<<outPrediction.size()<<std::endl;
  for(Int_t i=0;i<outPrediction.size();i++)
  {
+	 std::cout<<1<<std::endl;
    outPrediction[i]->Write(Form("outPrediction[%d]",i));
+   std::cout<<2<<std::endl;
    if(i<5) outData[i]->Write(Form("outData[%d]",i));
+   std::cout<<4<<std::endl;
  }
+ std::cout<<3<<std::endl;
  outputFile -> Close();
  std::cout<<"first thing saved "<<std::endl;
 
@@ -110,7 +115,7 @@ int main(int argc, char**argv){
  //status =  1 : covariance only approximate
  //status =  2 : full matrix but forced pos def
  //status =  3 : full accurate matrix
-
+/*
  //////////////////////	
  //inline Int_t status() const 
  //inline Int_t covQual() const 
@@ -136,5 +141,5 @@ int main(int argc, char**argv){
  double dd =  rep->getParVar(2)->getAsymErrorHi();
 
  //cout<<"errors are "<<bb<<" "<<dd<<endl;
-
+*/
 }

@@ -1,5 +1,5 @@
 /*
- *  Sterile for lownu fit header file.
+ *  Lownu for lownu fit header file.
  *
  *  Author: Guang Yang
  */
@@ -85,21 +85,21 @@
 using namespace RooFit;
 
 
-  class Sterile : public RooAbsReal {
+  class Lownu : public RooAbsReal {
 
   public:
 
-    Sterile (const char* name);
+    Lownu (const char* name);
 
-    Sterile (const Sterile & other, const char* name = 0): RooAbsReal(other,name) {};
-    virtual TObject* clone(const char* newname) const {return new Sterile (*this, newname);};
-    virtual ~Sterile () ;
+    Lownu (const Lownu & other, const char* name = 0): RooAbsReal(other,name) {};
+    virtual TObject* clone(const char* newname) const {return new Lownu (*this, newname);};
+    virtual ~Lownu () ;
 
-    Sterile (const Sterile & Sterile );
+    Lownu (const Lownu & Lownu );
 
     void randomGo(int newIsotope, RooListProxy* _pulls);
 
-    Sterile & operator=(const Sterile & rhs);
+    Lownu & operator=(const Lownu & rhs);
 
     RooFormulaVar* Chi2() ;
 
@@ -144,6 +144,7 @@ using namespace RooFit;
     void SetMatrixNameRENO(TString matrixNameRENO);
     void SetMatrixNameNEOS(TString matrixNameNEOS);
     void SetMatrixNamePROS(TString matrixNamePROS);
+    void SetInputName(TString fileName);
 
     void SetModelList(std::vector<TString>);
 
@@ -430,6 +431,7 @@ using namespace RooFit;
     TString fileNameDC;
     TString fileNameDYB;
     TString fileNamePROS;
+    TString ffileName;
     double fissionFraction[100];
     double binEdge[100];
     Int_t  _nBins;
