@@ -215,6 +215,17 @@ std::vector<TH1D*> Lownu:: preparePrediction(RooListProxy* _pulls, bool Iosc) co
 
 }
 
+void Lownu::SetInputTree(TString fileName)
+{
+    file = std::make_unique<TFile> (fileName);
+    this->inputTree = (TTree*)file.get()->Get("tree");
+    if (!inputTree)
+        throw std::runtime_error("asdasdad");
+    this->inputTree->SetBranchAddress("recoNeutrinoE", &recoNuE);
+    this->inputTree->SetBranchAddress("trueNeutrinoE", &trueNuE);
+    std::cout << __func__ << std::endl;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////==============================7.5 print prediction with folding===
 

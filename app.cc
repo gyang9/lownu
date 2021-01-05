@@ -47,8 +47,10 @@ int main(int argc, char**argv){
  rep->SetBinning(binHist);
 
  rep->SetInputName(fileLocation+"variableOutput.root");
- std::vector<TH1D*> tempPredList = rep->preparePrediction(rep->getPullList(), false);
- rep->prepareData(rep->preparePrediction(rep->getPullList(), false));
+ rep->SetInputTree(fileLocation+"variableOutput.root");
+ std::cout << rep->inputTree->GetEntries() << std::endl;
+ //std::vector<TH1D*> tempPredList = rep->preparePrediction(rep->getPullList(), false);
+ //rep->prepareData(rep->preparePrediction(rep->getPullList(), false));
 
  rep->setPull(vecInput1); 
  rep->setPullUnc(vecInput2);

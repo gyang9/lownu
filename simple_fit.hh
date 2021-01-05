@@ -479,6 +479,12 @@ using namespace RooFit;
     TVectorD* testVec = new TVectorD(100);//May,21,2020
     //double scaling4=123.456;//June,3,2020
     //  private:
+    //
+    float recoNuE;
+    float trueNuE;
+    TTree* inputTree = nullptr;
+    std::unique_ptr<TFile> file;
+    void SetInputTree(TString fileName);
    
    virtual  Double_t evaluate() const ;
 
