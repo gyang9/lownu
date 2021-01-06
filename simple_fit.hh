@@ -153,7 +153,7 @@ class Lownu : public RooAbsReal {
         //std::vector<TH1D*> preparePrediction(RooListProxy* _pulls) const;
         //std::vector<std::vector<float>> preparePrediction(RooListProxy* _pulls, bool Iosc ) const;
         std::vector<TH1D> preparePrediction(RooListProxy* _pulls, bool Iosc ) const;
-        std::vector<TH1D> test(RooListProxy* _pulls, bool Iosc ) const;
+        std::vector<TH1D> preparePrediction(double inputSigma) const;
         std::vector<double> wonseokPreparePrediction;//(RooListProxy* _pulls, bool Iosc ) const;//May,20,2020
         //std::vector<TH1D*> preparePrediction(RooListProxy* _pulls, std::vector<TString> modelList) const;
 
@@ -488,7 +488,7 @@ class Lownu : public RooAbsReal {
         std::unique_ptr<TFile> file;
         void SetInputTree(TString fileName);
 
-        TH1D TrueNuEShift(double inputSigma);
+        std::vector<TH1D> RecoNuEShift(double inputSigma);
 
         virtual  Double_t evaluate() const ;
     protected:
