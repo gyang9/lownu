@@ -88,13 +88,14 @@ class Lownu : public RooAbsReal {
 
     public:
 
-        Lownu (const char* name);
+        Lownu (const char* name, int numPars);
 
-        Lownu (const Lownu & other, const char* name = 0): RooAbsReal(other,name) {};
+        Lownu (const Lownu & other, const char* name = 0)
+            : RooAbsReal(other,name) {};
         virtual TObject* clone(const char* newname) const {return new Lownu (*this, newname);};
         virtual ~Lownu () ;
 
-        Lownu (const Lownu & Lownu );
+        Lownu (const Lownu& Lownu);
 
         void randomGo(int newIsotope, RooListProxy* _pulls);
 
@@ -150,12 +151,9 @@ class Lownu : public RooAbsReal {
         TMatrixD* prepareCovMatrix(TH2D* conv, TVectorD* vec, Double_t syst) const;
 
         std::vector<TH1D> prepareData(std::vector<TH1D> tempPredLis) const;
-        //std::vector<TH1D*> preparePrediction(RooListProxy* _pulls) const;
         //std::vector<std::vector<float>> preparePrediction(RooListProxy* _pulls, bool Iosc ) const;
         std::vector<TH1D> preparePrediction(RooListProxy* _pulls, bool Iosc ) const;
-        std::vector<TH1D> preparePrediction(double inputSigma) const;
         std::vector<double> wonseokPreparePrediction;//(RooListProxy* _pulls, bool Iosc ) const;//May,20,2020
-        //std::vector<TH1D*> preparePrediction(RooListProxy* _pulls, std::vector<TString> modelList) const;
 
         //std::vector<double> histForScale;//May,20,2020
         //double scalingForNEOS;//May,20,2020
@@ -465,7 +463,7 @@ class Lownu : public RooAbsReal {
         TString EHistFile ;
         TVectorD* vecEscale;    
 
-        TH1D* dataDC;
+        //TH1D* dataDC;
         TH1D* dataDYB;
         TH1D* dataRENO;
         TH1D* dataNEOS;
@@ -484,14 +482,24 @@ class Lownu : public RooAbsReal {
         //
         float recoNuE;
         float trueNuE;
+        int category;
         TTree* inputTree = nullptr;
         std::unique_ptr<TFile> file;
+        std::unique_ptr<TFile> flux_shifts;
         void SetInputTree(TString fileName);
+        void SetInputSyst(TString fileName);
+        std::vector<TH1D> syst;
 
-        std::vector<TH1D> RecoNuEShift(double inputSigma);
+        void SetNumberOfParameters(int inNum);
+        const int GetNumberOfParameters() const;
 
         virtual  Double_t evaluate() const ;
+
+        TH1D* mData;
+
     protected:
+    private:
+        int mNumberOfParameters;
 };
 
 

@@ -21,114 +21,103 @@
 
 using namespace std;
 
-Lownu ::Lownu (const char* name) 
+Lownu::Lownu (const char* name, int numPars) 
     : RooAbsReal(name,name)
+    , mNumberOfParameters(numPars)
 {
-    // there will be: pull 0-9 totally 10 flux systs.
+    _pulls = new RooListProxy("_pulls","_pulls",this);
 
-    _pulls     = new RooListProxy("_pulls","_pulls",this);
-    RooRealVar* Par1 = new RooRealVar("flux0","par1",0,0,100);
-    RooRealVar* Par2 = new RooRealVar("flux1","par2",0,0,100); // TMath::ASin(TMath::Sqrt(0.95))/2.,0,100);
-    RooRealVar* Par3 = new RooRealVar("flux2","par3",0,0,100);
-
-    Par1->setConstant(false);
-    Par2->setConstant(false);
-    Par3->setConstant(false);
-
-    _parlist.add(*Par1);
-    _parlist.add(*Par2);
-    _parlist.add(*Par3);
+    //Par[numPars+1] is for bkg
+    RooRealVar* Par[numPars+1];
+    for (int i = 0; i < numPars + 1; i++) {
+        if (i == numPars)
+            Par[i] = new RooRealVar("background", Form("par%d", i+1), 0, 0, 100);
+        else
+            Par[i] = new RooRealVar(Form("flux%d", i), Form("par%d", i+1), 0, 0, 100);
+        Par[i]->setConstant(false);
+        _parlist.add(*(Par[i]));
+    }
     _pulls->add(_parlist);
-
     this->addServerList(*_pulls);
-
-    dataDC = new TH1D("","dataDC",30, 0.5, 8.);
 };
 
 Lownu::~Lownu()
 {;}
 
 //=================================================================================================================================
-TMatrixD* Lownu::prepareCovMatrix(Int_t nBins, TVectorD* fVec) const
+TMatrixD* Lownu::prepareCovMatrix(Int_t nBins, TVectorD* pred) const
 {
+    std::cout << "now: " << __func__ << std::endl;
     //TFile fMatrixDC(fileNameDC);
 
-    TMatrixD* outMat = new TMatrixD( nBins , nBins);
+    TMatrixD* outMat = new TMatrixD(nBins , nBins);
 
-    if(inSyst) {
+    if (inSyst) {
         // 3% error, diagonal only
-        double fLownuErr;
+        double fLownuErr = 0.03;
         double errlist[100];
-        for (int temp=0;temp<10;temp++)
+        for (int temp = 0; temp < 10; temp++)
             errlist[temp] = fLownuErr;
         TVectorD* errList = new TVectorD(nBins);
         for (Int_t i = 0; i< nBins; i++) {
             (*errList)[i] = errlist[i];
         }
         //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        for(Int_t i = 0; i< nBins; i++) {
-            for(Int_t j =i ;j<nBins; j++) {
+        for(Int_t i = 0; i < nBins; i++) {
+            for(Int_t j = i; j < nBins; j++) {
                 if(i == j)	
-                    (*outMat)(i,j) = (*errList)[i] * (*errList)[j] * (*fVec)[i] * (*fVec)[j];
+                    (*outMat)(i, j) = (*errList)[i] * (*errList)[j] * (*pred)[i] * (*pred)[j];
             }
         }
     }
 
-    for(Int_t i = 0; i< nBins ; i++) {
-        (*outMat)(i,i) += (*fVec)[i];    
-        if((*outMat)(i,i) == 0) 
-            (*outMat)(i,i) += 0.0000000001;
+    for(Int_t i = 0; i < nBins ; i++) {
+        (*outMat)(i, i) += (*pred)[i];    
+        if((*outMat)(i, i) == 0) 
+            (*outMat)(i, i) += 0.0000000001;
     }
-
     return outMat ;
 }
 
-Double_t Lownu::FillEv( RooListProxy* _pulls ) const 
+Double_t Lownu::FillEv(RooListProxy* _pulls) const 
 {
     //std::cout<<"in FillEv() "<<std::endl;
-    std::cout << __func__ << std::endl;
+    std::cout << "now: " << __func__ << std::endl;
     std::vector<TH1D> tempPredList = this->preparePrediction(_pulls, true);
-    std::cout<<"filled in new pediction "<<std::endl;
+    //std::cout<<"filled in new pediction "<<std::endl;
 
-    //std::vector<TH1D*> tempDataList = this->prepareData();
-    TH1D predDC = tempPredList[0];
-
-    TVectorD* fVec = new TVectorD(_nBins);
+    TVectorD* pred = new TVectorD(_nBins);
+    std::vector<TVectorD> tempPrediction;
     TVectorD* fData = new TVectorD(_nBins);
+    std::vector<TVectorD> tempData;
+    TVectorD* difference = new TVectorD(_nBins);
 
-    TH1D* tempVec[5]; 
-    TH1D* tempDat[5]; 
-    for(Int_t i = 0; i < 5; i++) {
-        tempVec[i] = new TH1D("","",100,0,10);
-        tempDat[i] = new TH1D("","",100,0,10);
+    for (Int_t i = 0; i< _nBins; i++) {	 
+        (*pred)[i] = tempPredList[0].GetBinContent(i+1) ; //* this->surv_Prob( (thisE) , _pulls, 400)  ;
+    }
+    for (Int_t i = 0; i < _nBins; i++) {
+        (*fData)[i] = this->mData->GetBinContent(i+1)   ;
+    }
+    //data - prediciton
+    for (Int_t i = 0; i < _nBins; i++) { 
+        (*difference)[i] = TMath::Abs((*fData)[i] - (*pred)[i]);
     }
 
-    for(Int_t i = 0; i< _nBins; i++) {	 
-        (*fVec)[i] = predDC.GetBinContent(i+1) ; //* this->surv_Prob( (thisE) , _pulls, 400)  ;
-        tempVec[0]->SetBinContent(i+1, (*fVec)[i]);
-    }
-    for(Int_t i = 0; i < _nBins; i++) {
-        (*fData)[i] = dataDC->GetBinContent(i+1)   ;
-        tempDat[0]->SetBinContent(i+1, (*fData)[i]);
-    }
-    std::cout<<"data ready also "<<std::endl;
-    //--------------------------------------------------------------------------------------------------------------------------------Data------------------------------------
-
-    // scale to same total rate, doing shape only analysis 
-    double scaling1 = tempDat[0]->Integral()/tempVec[0]->Integral();
-
-    for(Int_t i = 0; i < _nBins; i++) { 
-        (*fData)[i] = TMath::Abs(dataDC->GetBinContent(i+1) - (*fVec)[i]);
-        //std::cout<<dataDC->GetBinContent(i+1)<<" "<<dataDYB->GetBinContent(i+1)<<" "<<dataRENO->GetBinContent(i+1)<<" "<<dataNEOS->GetBinContent(i+1)<<" "<<dataPROS->GetBinContent(i+1)<<std::endl;
-    }
-
-    TMatrixD* covMat = this->prepareCovMatrix(_nBins, fVec);
+    /*
+    TMatrixD* covMat = this->prepareCovMatrix(_nBins, pred);
     covMat->Invert();
 
-    TVectorD mulVec(*fData);
+    TVectorD mulVec(*difference);
     mulVec *= (*covMat);
 
-    Double_t currentResult = TMath::Abs(mulVec*(*fData));
+    Double_t currentResult = TMath::Abs(mulVec*(*difference));
+    */
+    Double_t currentResult;
+    for (Int_t i = 0; i < _nBins; i++) {
+        if ((*pred)[i] == 0)
+            continue;
+        currentResult += TMath::Power((*difference)[i], 2)/(*pred)[i];
+    }
     std::cout << "DC12_chi2 sans pull " << currentResult << std::endl;
 
     return (Double_t) currentResult; 
@@ -137,8 +126,8 @@ Double_t Lownu::FillEv( RooListProxy* _pulls ) const
 //================================================================================================================================================5. Fill the Ev, Prediction===============
 Double_t Lownu::evaluate() const
 { 
+    std::cout << "now: " << __func__ << std::endl;
     Double_t matPart = this->FillEv(_pulls);//original FillEv is matPart
-
     Double_t extraPull = this->ExtraPull(_pulls);//same variable extraPull
     Double_t tot = matPart + extraPull; //If needed, add pull terms here.
 
@@ -147,8 +136,9 @@ Double_t Lownu::evaluate() const
 
 Double_t Lownu::ExtraPull(RooListProxy* _pulls) const
 {
+    std::cout << "now: " << __func__ << std::endl;
     Double_t pullAdd = 0;
-    for(Int_t i = 0; i < 1; i++) {
+    for(Int_t i = 0; i < this->GetNumberOfParameters() + 1; i++) {
         pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(i))->getVal() - (*pullCV)[i]), 2)/TMath::Power((*pullUnc)[i], 2) ;
     }
     std::cout << "extra pull penalty: " << pullAdd << std::endl;
@@ -157,93 +147,103 @@ Double_t Lownu::ExtraPull(RooListProxy* _pulls) const
 
 std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) const
 {
-    std::cout << "updating preparePrediction() .." << std::endl;
+    std::cout << "now: " << __func__ << std::endl;
+    //std::cout << "updating preparePrediction() .." << std::endl;
 
-    TFile file2(fileLocation + "flux_shifts.root");
-    TH1D* ND_numubar_RHC = (TH1D*)file2.Get("syst0/ND_numubar_RHC");
-    int numBins = ND_numubar_RHC->GetNbinsX();
-    double minimum = ND_numubar_RHC->GetBinLowEdge(1);
-    double maximum = ND_numubar_RHC->GetBinLowEdge(numBins) + ND_numubar_RHC->GetBinWidth(numBins);
     std::vector<TH1D> predictionList;
     predictionList.clear();
-    TH1D predNuE("", "", numBins, minimum, maximum);
 
-    for (int i = 0; i < this->inputTree->GetEntries(); i++) {
-        inputTree->GetEntry(i);
+    int numBins = this->syst[0].GetNbinsX();
+    double minimum = this->syst[0].GetBinLowEdge(1);
+    double maximum = this->syst[0].GetBinLowEdge(numBins) + this->syst[0].GetBinWidth(numBins);
+    TH1D predNuE("", "", numBins, minimum, maximum);
+    for (int event = 0; event < this->inputTree->GetEntries(); event++) {
+        inputTree->GetEntry(event);
         int temp = 0;
-        for (int ii = 1; ii < ND_numubar_RHC->GetNbinsX()+1; ii++)
-        {
-            if (ND_numubar_RHC->GetBinLowEdge(ii) + ND_numubar_RHC->GetBinWidth(ii) > trueNuE/1000. && ND_numubar_RHC->GetBinLowEdge(ii) < trueNuE/1000.) {
-                temp = ii;
+        double weight = 1;
+        //signal
+        if (category == 1) {
+            for (int tempPar = 0; tempPar < this->GetNumberOfParameters(); tempPar++) {
+
+                for (int tempBin = 1; tempBin < this->syst[tempPar].GetNbinsX() + 1; tempBin++) {
+                    if (this->syst[tempPar].GetBinLowEdge(tempBin) + this->syst[tempPar].GetBinWidth(tempBin) > trueNuE/1000. 
+                        && this->syst[tempPar].GetBinLowEdge(tempBin) < trueNuE/1000.) {
+                        temp = tempBin;
+                    }
+                }
+                weight = weight + ((RooAbsReal*)_pulls->at(tempPar))->getVal() * this->syst[tempPar].GetBinContent(temp);
             }
+            predNuE.Fill(recoNuE/1000., weight);
         }
-        predNuE.Fill(recoNuE/1000., 1 + ((RooAbsReal*)_pulls->at(0))->getVal() * ND_numubar_RHC->GetBinContent(temp+1));
+        //bkg
+        if (category == 3) {
+            predNuE.Fill(recoNuE/1000., ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()))->getVal() * 1);
+        }
     }
     predictionList.push_back(predNuE);
 
-    std::cout << "return preprePrediction()" << std::endl;
+    //std::cout << "return preprePrediction()" << std::endl;
 
     //std::cout<<"************* before folding "<<predPROS->Integral()<<std::endl;
     //TH1D* temp(predPROS);
     //TH1D* fpredPROS = this->folding(temp);
     // seems pushing back the prompt energy spectrum
     return predictionList;
-
-}
-
-std::vector<TH1D> Lownu::preparePrediction(double inputSigma) const
-{
-    std::cout << "updating preparePrediction() .." << std::endl;
-
-    TFile file2(fileLocation + "flux_shifts.root");
-    TH1D* ND_numubar_RHC = (TH1D*)file2.Get("syst0/ND_numubar_RHC");
-    int numBins = ND_numubar_RHC->GetNbinsX();
-    double minimum = ND_numubar_RHC->GetBinLowEdge(1);
-    double maximum = ND_numubar_RHC->GetBinLowEdge(numBins) + ND_numubar_RHC->GetBinWidth(numBins);
-    std::vector<TH1D> predictionList;
-    predictionList.clear();
-    TH1D predNuE("", "", numBins, minimum, maximum);
-
-    for (int i = 0; i < this->inputTree->GetEntries(); i++) {
-        inputTree->GetEntry(i);
-        int temp = 0;
-        for (int ii = 1; ii < ND_numubar_RHC->GetNbinsX()+1; ii++)
-        {
-            if (ND_numubar_RHC->GetBinLowEdge(ii) + ND_numubar_RHC->GetBinWidth(ii) > trueNuE/1000. && ND_numubar_RHC->GetBinLowEdge(ii) < trueNuE/1000.) {
-                temp = ii;
-            }
-        }
-        predNuE.Fill(recoNuE/1000., 1 + inputSigma * ND_numubar_RHC->GetBinContent(temp+1));
-    }
-    predictionList.push_back(predNuE);
-
-    std::cout << "return preprePrediction()" << std::endl;
-
-    //std::cout<<"************* before folding "<<predPROS->Integral()<<std::endl;
-    //TH1D* temp(predPROS);
-    //TH1D* fpredPROS = this->folding(temp);
-    // seems pushing back the prompt energy spectrum
-    return predictionList;
-
 }
 
 void Lownu::SetInputTree(TString fileName)
 {
+    std::cout << "now: " << __func__ << std::endl;
     file = std::make_unique<TFile> (fileName);
     this->inputTree = (TTree*)file.get()->Get("tree");
     if (!inputTree)
         throw std::runtime_error("asdasdad");
     this->inputTree->SetBranchAddress("recoNeutrinoE", &recoNuE);
     this->inputTree->SetBranchAddress("trueNeutrinoE", &trueNuE);
-    //std::cout << __func__ << std::endl;
+    this->inputTree->SetBranchAddress("category", &category);
+
+    this->mData = new TH1D("mData", "mData", 16, 0, 8);
+
+    for (int i = 0; i < inputTree->GetEntries(); i++) {
+        inputTree->GetEntry(i);
+        this->mData->Fill(recoNuE/1000.);
+    }
+    //std::cout << "now: " << __func__ << std::endl;
 }
 
+void Lownu::SetInputSyst(TString fileName)
+{
+    std::cout << "now: " << __func__ << std::endl;
+    flux_shifts = std::make_unique<TFile> (fileName);
+    TH1D temp_ND_numubar_RHC[10];
+    for (int i = 0; i < this->GetNumberOfParameters(); i++)
+    {
+        TH1D* temp = (TH1D*)flux_shifts.get()->Get(Form("syst%d/ND_numubar_RHC",i));
+        temp_ND_numubar_RHC[i] = *temp;
+        this->syst.push_back(temp_ND_numubar_RHC[i]);
+    }
+    //std::cout << "now: " << __func__ << std::endl;
+}
+
+void Lownu::SetNumberOfParameters(int inNum)
+{
+    std::cout << "now: " << __func__ << std::endl;
+    if (inNum < 1)
+        throw std::runtime_error("SetNumberOfParameters(): invalid argument");
+    this->mNumberOfParameters = inNum;
+}
+
+const int Lownu::GetNumberOfParameters() const
+{
+    return this->mNumberOfParameters;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////==============================7.5 print prediction with folding===
 
 
 std::vector<TH1D> Lownu::prepareData(std::vector<TH1D> tempPredList) const// 
 {
+    std::cout << "now: " << __func__ << std::endl;
     return tempPredList;
 }
 
@@ -256,7 +256,6 @@ Double_t Lownu::getPar(int i) {
 RooRealVar* Lownu::getParVar(int i) {
     return ((RooRealVar*)_pulls->at(i));
 }
-
 
 void Lownu :: setSyst(Double_t syst){
     _syst = syst;
@@ -290,17 +289,17 @@ void Lownu :: setTime(Double_t time){
     _time= time;
 }
 
-void Lownu :: setPull(TH1D* pullvecCV){
-    pullCV = new TVectorD(11);
-    for(Int_t i=0;i<11;i++){
-        (*pullCV)[i] =  pullvecCV->GetBinContent(i+1);
+void Lownu :: setPull(TH1D* pullvecCV) {
+    this->pullCV = new TVectorD(this->GetNumberOfParameters() + 1);
+    for(Int_t i = 0; i < this->GetNumberOfParameters() + 1; i++) {
+        (*this->pullCV)[i] =  pullvecCV->GetBinContent(i+1);
     }
 }
 
-void Lownu :: setPullUnc(TH1D* pullvecUnc){
-    pullUnc = new TVectorD(11);
-    for(Int_t i=0;i<11;i++){
-        (*pullUnc)[i] = pullvecUnc->GetBinContent(i+1);
+void Lownu :: setPullUnc(TH1D* pullvecUnc) {
+    this->pullUnc = new TVectorD(this->GetNumberOfParameters() + 1);
+    for(Int_t i = 0; i < this->GetNumberOfParameters() + 1; i++) {
+        (*this->pullUnc)[i] = pullvecUnc->GetBinContent(i+1);
     }
 }
 
@@ -323,19 +322,13 @@ RooListProxy* Lownu::getPullList() const
     return _pulls;
 }
 
-std::vector<TH1D> Lownu::RecoNuEShift(double inputSigma)
-{
-    std::vector<TH1D> tempPredList = this->preparePrediction(inputSigma);
-    return tempPredList;
-}
-
 void Lownu::SetBinning(TH1D* binHist)
 {
-    for(Int_t i=0;i< binHist->GetNbinsX(); i++)
+    for(Int_t i = 0; i < binHist->GetNbinsX(); i++)
     {
-        binEdge[i] = binHist->GetBinContent(i+1);
+        binEdge[i] = binHist->GetBinContent(i + 1);
     }
-    _nBins = binHist->GetNbinsX()-1;
+    _nBins = binHist->GetNbinsX() - 1;
 }
 
 void Lownu::SetFissionFraction(TH1D* fissionHist)
@@ -375,7 +368,6 @@ void Lownu::SetModelList(std::vector<TString> mlist)
     modelList = mlist;
 }
 
-//std::vector<std::vector<float>> Lownu:: GetCurrentPrediction()
 std::vector<TH1D> Lownu:: GetCurrentPrediction()
 {
     return this->preparePrediction(this->getPullList(), true);
@@ -470,6 +462,7 @@ TVectorD* Lownu::getTestVec(){
 
 TMatrixD* Lownu:: ConversionMatrix(TString inputFile, TString inputTree)
 {
+    std::cout << "now: " << __func__ << std::endl;
     TFile f(inputFile);
     TTree* t = (TTree*)f.Get(inputTree);
     //   double binEdge[100];
@@ -519,13 +512,13 @@ TMatrixD* Lownu:: ConversionMatrix(TString inputFile, TString inputTree)
         }
     }
 
-
     t->Delete();
     f.Close();
     return cfMatrix;
 }
 
 TH1D* Lownu:: folding(TH1D* input) const{
+    std::cout << "now: " << __func__ << std::endl;
     TH1D* output(input);
     for(Int_t i=0;i<uMatrix->GetNrows();i++){	
         double sum = 0;

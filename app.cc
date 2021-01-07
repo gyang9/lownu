@@ -19,24 +19,25 @@ int main(int argc, char**argv) {
 
     RooFitResult* res;
     //Lownu * rep = new Lownu ("_rep");
-    std::unique_ptr<Lownu> rep = std::make_unique<Lownu> ("_rep");
+    std::unique_ptr<Lownu> rep = std::make_unique<Lownu> ("_rep", 10);
     char formula[10];
 
     std::cout << "start to run " << std::endl;
 
     // vecInput1 is the CV for pulls while vecInput2 is the unc. for pulls
-    //TH1D* vecInput1 = new TH1D("","",11,0,11);
-    std::unique_ptr<TH1D> vecInput1 = std::make_unique<TH1D> ("","",11,0,11);
-    //TH1D* vecInput2 = new TH1D("","",11,0,11);
-    std::unique_ptr<TH1D> vecInput2 = std::make_unique<TH1D> ("","",11,0,11);
+    TH1D* vecInput1 = new TH1D("", "", rep->GetNumberOfParameters() + 1, 0, rep->GetNumberOfParameters() + 1);
+    //std::unique_ptr<TH1D> vecInput1 = std::make_unique<TH1D> ("","",11,0,11);
+    TH1D* vecInput2 = new TH1D("", "", rep->GetNumberOfParameters() + 1, 0, rep->GetNumberOfParameters() + 1);
+    //std::unique_ptr<TH1D> vecInput2 = std::make_unique<TH1D> ("","",11,0,11);
     //vecInput1->Print();
 
-    vecInput1->SetBinContent(1, 1);
-    vecInput2->SetBinContent(1, 1);
+    for (int i = 0; i < rep->GetNumberOfParameters() + 1; i++) {
+        vecInput1->SetBinContent(i+1, 0);
+        vecInput2->SetBinContent(i+1, 1);
+    }
 
     std::cout << "you've set some inputs " << std::endl;
 
-    // binned from 0-8 GeV with bin width of 0.5 GeV
     int nBins = 16;
     //TH1D* binHist = new TH1D("","",nBins+1,0,nBins+1);
     std::unique_ptr<TH1D> binHist = std::make_unique<TH1D> ("", "", nBins+1 , 0, nBins + 1);
@@ -44,36 +45,23 @@ int main(int argc, char**argv) {
         binHist->SetBinContent(i+1, 0.5 + 0.25 * i);
     }
 
-
-    //TString fileLocation = "/gpfs/projects/McGrewGroup/gyang/REACTOR-related/";
     TString fileLocation = "./";
     rep->setFileLocation(fileLocation);
 
     rep->SetBinning(binHist.get());
 
-    rep->SetInputName(fileLocation + "variableOutput.root");
-    rep->SetInputTree(fileLocation + "variableOutput.root");
-
-    std::vector<TH1D> test1 = rep->RecoNuEShift(0);
-    std::cout << "test.GetMean()   : " << test1[0].GetMean()   << std::endl;
-    std::cout << "test.GetStdDev() : " << test1[0].GetStdDev() << std::endl;
-    std::vector<TH1D> test = rep->RecoNuEShift(1);
-    std::cout << "test.GetMean()   : " << test[0].GetMean()   << std::endl;
-    std::cout << "test.GetStdDev() : " << test[0].GetStdDev() << std::endl;
-
-    //std::cout << ((RooAbsReal*)rep->_pulls->at(0))->getVal() << std::endl;
-
-    TCanvas can;
-    test[0].Draw();
-    test1[0].SetLineColor(2);
-    test1[0].Draw("same");
-    can.SaveAs("shift.pdf");
+    rep->SetInputName(fileLocation + "variableOutputAfterCut.root");
+    rep->SetInputTree(fileLocation + "variableOutputAfterCut.root");
+    rep->SetInputSyst(fileLocation + "flux_shifts.root");
 
     std::vector<TH1D> tempPredList = rep->preparePrediction(rep->getPullList(), false);
-    rep->prepareData(rep->preparePrediction(rep->getPullList(), false));
+    std::cout << "tempPredList.size(): " << tempPredList.size() << std::endl;
+    TCanvas can4;
+    tempPredList[0].Draw();
+    can4.SaveAs("beforeFit.png");
 
-    rep->setPull(vecInput1.get()); 
-    rep->setPullUnc(vecInput2.get());
+    rep->setPull(vecInput1); 
+    rep->setPullUnc(vecInput2);
 
     std::cout << "ended up with setting us basic stuff " << std::endl;
     rep->FillEv(rep->getPullList());
@@ -91,8 +79,6 @@ int main(int argc, char**argv) {
     //rep->setEShiftHist("Escalefraction.root");
     // *******************************************************************************************
     // ******************************************************************************************* 
-
-    rep->getParVar(0)->setConstant(false);
 
     std::cout << "------------  Getting current spectra " << std::endl;
     std::vector<TH1D> outPrediction = rep->GetCurrentPrediction(); //tempPredList; // rep->GetCurrentPrediction();
@@ -158,6 +144,22 @@ int main(int argc, char**argv) {
 
     double bb = rep->getParVar(2)->getAsymErrorLo();
     double dd = rep->getParVar(2)->getAsymErrorHi();
+
+    TCanvas can;
+    rep->mData->SetLineColor(2);
+    rep->mData->Draw();
+    can.SaveAs("data.png");
+
+    std::vector<TH1D> pred = rep->preparePrediction(rep->getPullList(), false);
+
+    TCanvas can1;
+    pred[0].Draw();
+    can1.SaveAs("pred.png");
+
+    TCanvas can2;
+    pred[0].Draw();
+    rep->mData->Draw("same");
+    can2.SaveAs("together.png");
 
     //cout << "errors are " << bb << " " << dd << endl;
 }
