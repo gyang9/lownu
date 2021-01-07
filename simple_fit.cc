@@ -47,7 +47,6 @@ Lownu::~Lownu()
 //=================================================================================================================================
 TMatrixD* Lownu::prepareCovMatrix(Int_t nBins, TVectorD* pred) const
 {
-    std::cout << "now: " << __func__ << std::endl;
     //TFile fMatrixDC(fileNameDC);
 
     TMatrixD* outMat = new TMatrixD(nBins , nBins);
@@ -82,7 +81,6 @@ TMatrixD* Lownu::prepareCovMatrix(Int_t nBins, TVectorD* pred) const
 Double_t Lownu::FillEv(RooListProxy* _pulls) const 
 {
     //std::cout<<"in FillEv() "<<std::endl;
-    std::cout << "now: " << __func__ << std::endl;
     std::vector<TH1D> tempPredList = this->preparePrediction(_pulls, true);
     //std::cout<<"filled in new pediction "<<std::endl;
 
@@ -126,17 +124,16 @@ Double_t Lownu::FillEv(RooListProxy* _pulls) const
 //================================================================================================================================================5. Fill the Ev, Prediction===============
 Double_t Lownu::evaluate() const
 { 
-    std::cout << "now: " << __func__ << std::endl;
     Double_t matPart = this->FillEv(_pulls);//original FillEv is matPart
     Double_t extraPull = this->ExtraPull(_pulls);//same variable extraPull
     Double_t tot = matPart + extraPull; //If needed, add pull terms here.
+    //Double_t tot = matPart;
 
     return tot;
 }
 
 Double_t Lownu::ExtraPull(RooListProxy* _pulls) const
 {
-    std::cout << "now: " << __func__ << std::endl;
     Double_t pullAdd = 0;
     for(Int_t i = 0; i < this->GetNumberOfParameters() + 1; i++) {
         pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(i))->getVal() - (*pullCV)[i]), 2)/TMath::Power((*pullUnc)[i], 2) ;
@@ -147,7 +144,6 @@ Double_t Lownu::ExtraPull(RooListProxy* _pulls) const
 
 std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) const
 {
-    std::cout << "now: " << __func__ << std::endl;
     //std::cout << "updating preparePrediction() .." << std::endl;
 
     std::vector<TH1D> predictionList;
@@ -168,6 +164,8 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
                 for (int tempBin = 1; tempBin < this->syst[tempPar].GetNbinsX() + 1; tempBin++) {
                     if (this->syst[tempPar].GetBinLowEdge(tempBin) + this->syst[tempPar].GetBinWidth(tempBin) > trueNuE/1000. 
                         && this->syst[tempPar].GetBinLowEdge(tempBin) < trueNuE/1000.) {
+                    //if (this->syst[tempPar].GetBinLowEdge(tempBin) + this->syst[tempPar].GetBinWidth(tempBin) > recoNuE/1000. 
+                    //    && this->syst[tempPar].GetBinLowEdge(tempBin) < recoNuE/1000.) {
                         temp = tempBin;
                     }
                 }
@@ -177,7 +175,7 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
         }
         //bkg
         if (category == 3) {
-            predNuE.Fill(recoNuE/1000., ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()))->getVal() * 1);
+            predNuE.Fill(recoNuE/1000., (1 + ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()))->getVal()) * 1);
         }
     }
     predictionList.push_back(predNuE);
@@ -193,7 +191,6 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
 
 void Lownu::SetInputTree(TString fileName)
 {
-    std::cout << "now: " << __func__ << std::endl;
     file = std::make_unique<TFile> (fileName);
     this->inputTree = (TTree*)file.get()->Get("tree");
     if (!inputTree)
@@ -208,26 +205,22 @@ void Lownu::SetInputTree(TString fileName)
         inputTree->GetEntry(i);
         this->mData->Fill(recoNuE/1000.);
     }
-    //std::cout << "now: " << __func__ << std::endl;
 }
 
 void Lownu::SetInputSyst(TString fileName)
 {
-    std::cout << "now: " << __func__ << std::endl;
     flux_shifts = std::make_unique<TFile> (fileName);
-    TH1D temp_ND_numubar_RHC[10];
+    TH1D temp_ND_numubar_RHC[this->GetNumberOfParameters()];
     for (int i = 0; i < this->GetNumberOfParameters(); i++)
     {
         TH1D* temp = (TH1D*)flux_shifts.get()->Get(Form("syst%d/ND_numubar_RHC",i));
         temp_ND_numubar_RHC[i] = *temp;
         this->syst.push_back(temp_ND_numubar_RHC[i]);
     }
-    //std::cout << "now: " << __func__ << std::endl;
 }
 
 void Lownu::SetNumberOfParameters(int inNum)
 {
-    std::cout << "now: " << __func__ << std::endl;
     if (inNum < 1)
         throw std::runtime_error("SetNumberOfParameters(): invalid argument");
     this->mNumberOfParameters = inNum;
@@ -243,7 +236,6 @@ const int Lownu::GetNumberOfParameters() const
 
 std::vector<TH1D> Lownu::prepareData(std::vector<TH1D> tempPredList) const// 
 {
-    std::cout << "now: " << __func__ << std::endl;
     return tempPredList;
 }
 
@@ -462,7 +454,6 @@ TVectorD* Lownu::getTestVec(){
 
 TMatrixD* Lownu:: ConversionMatrix(TString inputFile, TString inputTree)
 {
-    std::cout << "now: " << __func__ << std::endl;
     TFile f(inputFile);
     TTree* t = (TTree*)f.Get(inputTree);
     //   double binEdge[100];
@@ -518,7 +509,6 @@ TMatrixD* Lownu:: ConversionMatrix(TString inputFile, TString inputTree)
 }
 
 TH1D* Lownu:: folding(TH1D* input) const{
-    std::cout << "now: " << __func__ << std::endl;
     TH1D* output(input);
     for(Int_t i=0;i<uMatrix->GetNrows();i++){	
         double sum = 0;

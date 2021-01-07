@@ -17,9 +17,16 @@ using namespace std;
 
 int main(int argc, char**argv) {
 
+    int numPar = 0;
+    if (argc < 2) {
+        std::cout << "./app {number of parameters}" << std::endl;
+        return 0;
+    }
+    numPar = std::stoi(argv[1]);
+
     RooFitResult* res;
     //Lownu * rep = new Lownu ("_rep");
-    std::unique_ptr<Lownu> rep = std::make_unique<Lownu> ("_rep", 10);
+    std::unique_ptr<Lownu> rep = std::make_unique<Lownu> ("_rep", numPar);
     char formula[10];
 
     std::cout << "start to run " << std::endl;
@@ -56,8 +63,11 @@ int main(int argc, char**argv) {
 
     std::vector<TH1D> tempPredList = rep->preparePrediction(rep->getPullList(), false);
     std::cout << "tempPredList.size(): " << tempPredList.size() << std::endl;
+
     TCanvas can4;
     tempPredList[0].Draw();
+    rep->mData->SetLineColor(2);
+    rep->mData->Draw("same");
     can4.SaveAs("beforeFit.png");
 
     rep->setPull(vecInput1); 
@@ -142,9 +152,6 @@ int main(int argc, char**argv) {
     //std::cout << "result list: " << std::endl;
     //std::cout << "chi2: " << bestFit  << std::endl;
 
-    double bb = rep->getParVar(2)->getAsymErrorLo();
-    double dd = rep->getParVar(2)->getAsymErrorHi();
-
     TCanvas can;
     rep->mData->SetLineColor(2);
     rep->mData->Draw();
@@ -159,7 +166,5 @@ int main(int argc, char**argv) {
     TCanvas can2;
     pred[0].Draw();
     rep->mData->Draw("same");
-    can2.SaveAs("together.png");
-
-    //cout << "errors are " << bb << " " << dd << endl;
+    can2.SaveAs("afterfit_together.png");
 }
