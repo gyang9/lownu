@@ -31,14 +31,15 @@ Lownu::Lownu (const char* name, int numPars)
     RooRealVar* Par[numPars+1];
     for (int i = 0; i < numPars + 1; i++) {
         if (i == numPars)
-            Par[i] = new RooRealVar("background", Form("par%d", i+1), 0, 0, 100);
+            Par[i] = new RooRealVar("background", Form("par%d", i+1), 0, -100, 100);
         else
-            Par[i] = new RooRealVar(Form("flux%d", i), Form("par%d", i+1), 0, 0, 100);
+            Par[i] = new RooRealVar(Form("flux%d", i), Form("par%d", i+1), 0, -100, 100);
         Par[i]->setConstant(false);
         _parlist.add(*(Par[i]));
     }
     _pulls->add(_parlist);
     this->addServerList(*_pulls);
+    mNuCut = 200;
 };
 
 Lownu::~Lownu()
@@ -47,34 +48,55 @@ Lownu::~Lownu()
 //=================================================================================================================================
 TMatrixD* Lownu::prepareCovMatrix(Int_t nBins, TVectorD* pred) const
 {
-    //TFile fMatrixDC(fileNameDC);
-
     TMatrixD* outMat = new TMatrixD(nBins , nBins);
 
-    if (inSyst) {
-        // 3% error, diagonal only
-        double fLownuErr = 0.03;
-        double errlist[100];
-        for (int temp = 0; temp < 10; temp++)
-            errlist[temp] = fLownuErr;
-        TVectorD* errList = new TVectorD(nBins);
-        for (Int_t i = 0; i< nBins; i++) {
-            (*errList)[i] = errlist[i];
-        }
-        //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        for(Int_t i = 0; i < nBins; i++) {
-            for(Int_t j = i; j < nBins; j++) {
-                if(i == j)	
-                    (*outMat)(i, j) = (*errList)[i] * (*errList)[j] * (*pred)[i] * (*pred)[j];
-            }
-        }
-    }
+    TVectorD uncertainties(_nBins);
+    uncertainties[0] = 0.005;
+    uncertainties[1] = 0.002;
+    uncertainties[2] = -0.001;
+    uncertainties[3] = -0.002;
+    uncertainties[4] = -0.003;
+    uncertainties[5] = -0.004;
+    uncertainties[6] = -0.004;
+    uncertainties[7] = -0.004;
+    uncertainties[8] = -0.004;
+    uncertainties[9] = -0.004;
+    uncertainties[10] = -0.004;
+    uncertainties[11] = -0.004;
+    uncertainties[12] = -0.004;
+    uncertainties[13] = -0.004;
+    uncertainties[14] = -0.004;
+    uncertainties[15] = -0.005;
+    TVectorD recoUncertainties(_nBins);
+    recoUncertainties = *(this->mFolding)*uncertainties;
 
     for(Int_t i = 0; i < nBins ; i++) {
-        (*outMat)(i, i) += (*pred)[i];    
+        //(*outMat)(i, i) = (*pred)[i] * 5E+5 / this->mData->GetEntries();    
+        (*outMat)(i, i) = std::pow(recoUncertainties[i] * (*pred)[i] * 5E+5 /this->mData->GetEntries(), 2)  
+                          + (*pred)[i] * 5E+5 / this->mData->GetEntries();    
         if((*outMat)(i, i) == 0) 
             (*outMat)(i, i) += 0.0000000001;
     }
+
+    //if (inSyst) {
+    //    // 3% error, diagonal only
+    //    double fLownuErr = 0.03;
+    //    double errlist[100];
+    //    for (int temp = 0; temp < 10; temp++)
+    //        errlist[temp] = fLownuErr;
+    //    TVectorD* errList = new TVectorD(nBins);
+    //    for (Int_t i = 0; i< nBins; i++) {
+    //        (*errList)[i] = errlist[i];
+    //    }
+    //    //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //    for(Int_t i = 0; i < nBins; i++) {
+    //        for(Int_t j = i; j < nBins; j++) {
+    //            if(i == j)	
+    //                (*outMat)(i, j) = (*errList)[i] * (*errList)[j] + (*pred)[i] * (*pred)[j];
+    //        }
+    //    }
+    //}
+
     return outMat ;
 }
 
@@ -98,10 +120,11 @@ Double_t Lownu::FillEv(RooListProxy* _pulls) const
     }
     //data - prediciton
     for (Int_t i = 0; i < _nBins; i++) { 
-        (*difference)[i] = TMath::Abs((*fData)[i] - (*pred)[i]);
+        //(*difference)[i] = TMath::Abs((*fData)[i] - (*pred)[i]);
+        (*difference)[i] = 5E+5/this->mData->GetEntries() * ((*pred)[i] - (*fData)[i]);
     }
 
-    /*
+    //std::cout << (5E+5/this->mData->G
     TMatrixD* covMat = this->prepareCovMatrix(_nBins, pred);
     covMat->Invert();
 
@@ -109,13 +132,12 @@ Double_t Lownu::FillEv(RooListProxy* _pulls) const
     mulVec *= (*covMat);
 
     Double_t currentResult = TMath::Abs(mulVec*(*difference));
-    */
-    Double_t currentResult;
-    for (Int_t i = 0; i < _nBins; i++) {
-        if ((*pred)[i] == 0)
-            continue;
-        currentResult += TMath::Power((*difference)[i], 2)/(*pred)[i];
-    }
+    //Double_t currentResult;
+    //for (Int_t i = 0; i < _nBins; i++) {
+    //    if ((*pred)[i] == 0)
+    //        continue;
+    //    //currentResult += TMath::Power((*difference)[i], 2)/(1*(*pred)[i]);
+    //}
     std::cout << "DC12_chi2 sans pull " << currentResult << std::endl;
 
     return (Double_t) currentResult; 
@@ -158,14 +180,12 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
         int temp = 0;
         double weight = 1;
         //signal
-        if (category == 1) {
+        if (category == 1 && recoNeutronKE < this->mNuCut) {
             for (int tempPar = 0; tempPar < this->GetNumberOfParameters(); tempPar++) {
 
                 for (int tempBin = 1; tempBin < this->syst[tempPar].GetNbinsX() + 1; tempBin++) {
                     if (this->syst[tempPar].GetBinLowEdge(tempBin) + this->syst[tempPar].GetBinWidth(tempBin) > trueNuE/1000. 
                         && this->syst[tempPar].GetBinLowEdge(tempBin) < trueNuE/1000.) {
-                    //if (this->syst[tempPar].GetBinLowEdge(tempBin) + this->syst[tempPar].GetBinWidth(tempBin) > recoNuE/1000. 
-                    //    && this->syst[tempPar].GetBinLowEdge(tempBin) < recoNuE/1000.) {
                         temp = tempBin;
                     }
                 }
@@ -174,10 +194,12 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
             predNuE.Fill(recoNuE/1000., weight);
         }
         //bkg
-        if (category == 3) {
+        if (category == 3 && recoNeutronKE < this->mNuCut) {
             predNuE.Fill(recoNuE/1000., (1 + ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()))->getVal()) * 1);
         }
     }
+    
+    //predNuE.Scale((5.5E+5)/predNuE.GetEntries(), "nosw2");
     predictionList.push_back(predNuE);
 
     //std::cout << "return preprePrediction()" << std::endl;
@@ -198,12 +220,42 @@ void Lownu::SetInputTree(TString fileName)
     this->inputTree->SetBranchAddress("recoNeutrinoE", &recoNuE);
     this->inputTree->SetBranchAddress("trueNeutrinoE", &trueNuE);
     this->inputTree->SetBranchAddress("category", &category);
+    this->inputTree->SetBranchAddress("recoNeutronKE", &recoNeutronKE);
 
     this->mData = new TH1D("mData", "mData", 16, 0, 8);
+    this->mFolding = std::make_unique<TMatrixD> (_nBins, _nBins);
+
+    //for each bin
+    int numberOfTrueNuE[_nBins];
+    int numberOfRecoNuE[_nBins][_nBins];
+    for (int i = 0; i < _nBins; i++) {
+        numberOfTrueNuE[i] = 0;
+        for (int j = 0; j < _nBins; j++) {
+            numberOfRecoNuE[i][j] = 0;
+        }
+    }
 
     for (int i = 0; i < inputTree->GetEntries(); i++) {
         inputTree->GetEntry(i);
-        this->mData->Fill(recoNuE/1000.);
+        if (recoNeutronKE < this->mNuCut) {
+            this->mData->Fill(recoNuE/1000.);
+            for (int j = 0; j < _nBins; j++) {
+                if (0.5*j < trueNuE/1000. && trueNuE/1000. < 0.5*(j+1)) {
+                    numberOfTrueNuE[j]++;
+                    for (int k = 0; k < _nBins; k++) {
+                        if (0.5*k < recoNuE/1000. && recoNuE/1000. < 0.5*(k+1)) {
+                            numberOfRecoNuE[j][k]++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for(Int_t i = 0; i < _nBins; i++) {
+        for(Int_t j = 0; j < _nBins; j++) {
+            (*mFolding)(i, j) = numberOfRecoNuE[j][i]/numberOfTrueNuE[j];
+        }
     }
 }
 

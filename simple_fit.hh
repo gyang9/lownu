@@ -166,128 +166,6 @@ class Lownu : public RooAbsReal {
 
         TMatrixD* prepareCovMatrix(Int_t nBins, TVectorD* fVec) const;
 
-        RooRealVar Par1 ;
-        RooRealVar Par2 ;
-        RooRealVar Par3 ;
-        RooRealVar Par4 ;
-        RooRealVar Par5 ;
-        RooRealVar Par6 ;
-        RooRealVar Par7 ;
-        RooRealVar Par8 ;
-        RooRealVar Par9 ;
-        RooRealVar Par10 ;
-        RooRealVar Par11 ;
-        RooRealVar Par12 ;
-        RooRealVar Par13 ;
-        RooRealVar Par14 ;
-        RooRealVar Par15 ;
-        RooRealVar Par16 ;
-        RooRealVar Par17 ;
-        RooRealVar Par18 ;
-        RooRealVar Par19 ;
-        RooRealVar Par20 ;
-        RooRealVar Par21 ;
-        RooRealVar Par22 ;
-        RooRealVar Par23 ;
-        RooRealVar Par24 ;
-        RooRealVar Par25 ;
-        RooRealVar Par26 ;
-        RooRealVar Par27 ;
-        RooRealVar Par28 ;
-        RooRealVar Par29 ;
-        RooRealVar Par30 ;
-        RooRealVar Par31 ;
-        RooRealVar Par32 ;
-        RooRealVar Par33 ;
-        RooRealVar Par34 ;
-        RooRealVar Par35 ;
-        RooRealVar Par36 ;
-        RooRealVar Par37 ;
-        RooRealVar Par38 ;
-        RooRealVar Par39 ;
-        RooRealVar Par40 ;
-        RooRealVar Par41 ;
-        RooRealVar Par42 ;
-        RooRealVar Par43 ;
-        RooRealVar Par44 ;
-        RooRealVar Par45 ;
-        RooRealVar Par46 ;
-        RooRealVar Par47 ;
-        RooRealVar Par48 ;
-        RooRealVar Par49 ;
-        RooRealVar Par50 ;
-        RooRealVar Par51 ;
-        RooRealVar Par52 ;
-        RooRealVar Par53 ;
-        RooRealVar Par54 ;
-        RooRealVar Par55 ;
-        RooRealVar Par56 ;
-        RooRealVar Par57 ;
-        RooRealVar Par58 ;
-        RooRealVar Par59 ;
-        RooRealVar Par60 ;
-
-        Double_t _par1;
-        Double_t _par2;
-        Double_t _par3;
-        Double_t _par4;
-        Double_t _par5;
-        Double_t _par6;
-        Double_t _par7;
-        Double_t _par8;
-        Double_t _par9;
-        Double_t _par10;
-        Double_t _par11;
-        Double_t _par12;
-        Double_t _par13;
-        Double_t _par14;
-        Double_t _par15;
-        Double_t _par16;
-        Double_t _par17;
-        Double_t _par18;
-        Double_t _par19;
-        Double_t _par20;
-        Double_t _par21;
-        Double_t _par22;
-        Double_t _par23;
-        Double_t _par24;
-        Double_t _par25;
-        Double_t _par26;
-        Double_t _par27;
-        Double_t _par28;
-        Double_t _par29;
-        Double_t _par30;
-        Double_t _par31;
-        Double_t _par32;
-        Double_t _par33;
-        Double_t _par34;
-        Double_t _par35;
-        Double_t _par36;
-        Double_t _par37;
-        Double_t _par38;
-        Double_t _par39;
-        Double_t _par40;
-        Double_t _par41;
-        Double_t _par42;
-        Double_t _par43;
-        Double_t _par44;
-        Double_t _par45;
-        Double_t _par46;
-        Double_t _par47;
-        Double_t _par48;
-        Double_t _par49;
-        Double_t _par50;
-        Double_t _par51;
-        Double_t _par52;
-        Double_t _par53;
-        Double_t _par54;
-        Double_t _par55;
-        Double_t _par56;
-        Double_t _par57;
-        Double_t _par58;
-        Double_t _par59;
-        Double_t _par60;
-
         Double_t getPar(int i) ;
         void DataSwitch(Bool_t dataSwitch=true) const;
         Bool_t getDataSwitch() const;
@@ -480,20 +358,27 @@ class Lownu : public RooAbsReal {
         //double scaling4=123.456;//June,3,2020
         //  private:
         //
+        /**
+         * @brief low nu cut, MeV
+         */
+        float mNuCut;
         float recoNuE;
         float trueNuE;
         int category;
+        float recoNeutronKE;
         TTree* inputTree = nullptr;
         std::unique_ptr<TFile> file;
         std::unique_ptr<TFile> flux_shifts;
+        std::vector<TH1D> syst;
         void SetInputTree(TString fileName);
         void SetInputSyst(TString fileName);
-        std::vector<TH1D> syst;
 
         void SetNumberOfParameters(int inNum);
         const int GetNumberOfParameters() const;
 
         virtual  Double_t evaluate() const ;
+
+        std::unique_ptr<TMatrixD> mFolding;
 
         TH1D* mData;
 
