@@ -18,25 +18,31 @@ using namespace std;
 int main(int argc, char**argv) {
 
     int numPar = 0;
-    if (argc < 2) {
-        std::cout << "./app {number of parameters}" << std::endl;
-        return 0;
+    //if (argc < 2) {
+    //    std::cout << "./app {number of parameters}" << std::endl;
+    //    return 0;
+    //}
+    //numPar = std::stoi(argv[1]);
+
+    std::cout << "how many parameters? (1~256) : ";
+    std::cin >> numPar;
+    while (numPar < 1 || numPar > 256) {
+        std::cout << "invalied number of parameters, put again (1~256) : ";
+        std::cin >> numPar;
     }
-    numPar = std::stoi(argv[1]);
+    double Error = 0;
+    std::cout << "how much error? : ";
+    std::cin >> Error;
 
     RooFitResult* res;
-    //Lownu * rep = new Lownu ("_rep");
-    std::unique_ptr<Lownu> rep = std::make_unique<Lownu> ("_rep", numPar);
+    std::unique_ptr<Lownu> rep = std::make_unique<Lownu> ("_rep", numPar, Error);
     char formula[10];
 
     std::cout << "start to run " << std::endl;
 
     // vecInput1 is the CV for pulls while vecInput2 is the unc. for pulls
-    TH1D* vecInput1 = new TH1D("", "", rep->GetNumberOfParameters() + 1, 0, rep->GetNumberOfParameters() + 1);
-    //std::unique_ptr<TH1D> vecInput1 = std::make_unique<TH1D> ("","",11,0,11);
-    TH1D* vecInput2 = new TH1D("", "", rep->GetNumberOfParameters() + 1, 0, rep->GetNumberOfParameters() + 1);
-    //std::unique_ptr<TH1D> vecInput2 = std::make_unique<TH1D> ("","",11,0,11);
-    //vecInput1->Print();
+    auto vecInput1 = std::make_unique<TH1D> ("", "", rep->GetNumberOfParameters() + 1, 0, rep->GetNumberOfParameters() + 1);
+    auto vecInput2 = std::make_unique<TH1D> ("", "", rep->GetNumberOfParameters() + 1, 0, rep->GetNumberOfParameters() + 1);
 
     for (int i = 0; i < rep->GetNumberOfParameters() + 1; i++) {
         vecInput1->SetBinContent(i+1, 0);
@@ -46,7 +52,6 @@ int main(int argc, char**argv) {
     std::cout << "you've set some inputs " << std::endl;
 
     int nBins = 16;
-    //TH1D* binHist = new TH1D("","",nBins+1,0,nBins+1);
     std::unique_ptr<TH1D> binHist = std::make_unique<TH1D> ("", "", nBins+1 , 0, nBins + 1);
     for(Int_t i = 0; i < nBins + 1; i++) {
         binHist->SetBinContent(i+1, 0.5 + 0.25 * i);
@@ -70,8 +75,8 @@ int main(int argc, char**argv) {
     rep->mData->Draw("same");
     can4.SaveAs("beforeFit.png");
 
-    rep->setPull(vecInput1); 
-    rep->setPullUnc(vecInput2);
+    rep->setPull(vecInput1.get()); 
+    rep->setPullUnc(vecInput2.get());
 
     std::cout << "ended up with setting us basic stuff " << std::endl;
     rep->FillEv(rep->getPullList());

@@ -88,7 +88,7 @@ class Lownu : public RooAbsReal {
 
     public:
 
-        Lownu (const char* name, int numPars);
+        Lownu (const char* name, int numPars, double inError);
 
         Lownu (const Lownu & other, const char* name = 0)
             : RooAbsReal(other,name) {};
@@ -207,8 +207,7 @@ class Lownu : public RooAbsReal {
         RooArgList _parlist;
         RooListProxy* _pulls;
 
-        //std::vector<std::vector<float>> GetCurrentPrediction(); //혹시 이것때문에 출력은 절대 아닐 텐데...
-        std::vector<TH1D> GetCurrentPrediction(); //혹시 이것때문에 출력은 절대 아닐 텐데...
+        std::vector<TH1D> GetCurrentPrediction(); 
         std::vector<TH1D> GetCurrentData(std::vector<TH1D> pred);
 
         TF1* GetIBDXsecFormula() const;
@@ -354,10 +353,8 @@ class Lownu : public RooAbsReal {
         std::vector<TString> modelList;
 
         std::vector<TH1D*> dataList;
-        TVectorD* testVec = new TVectorD(100);//May,21,2020
         //double scaling4=123.456;//June,3,2020
-        //  private:
-        //
+
         /**
          * @brief low nu cut, MeV
          */
@@ -368,7 +365,7 @@ class Lownu : public RooAbsReal {
         float recoNeutronKE;
         TTree* inputTree = nullptr;
         std::unique_ptr<TFile> file;
-        std::unique_ptr<TFile> flux_shifts;
+        std::unique_ptr<TFile> fileFluxShifts;
         std::vector<TH1D> syst;
         void SetInputTree(TString fileName);
         void SetInputSyst(TString fileName);
@@ -381,10 +378,9 @@ class Lownu : public RooAbsReal {
         std::unique_ptr<TMatrixD> mFolding;
 
         TH1D* mData;
+        double mError = 0;
 
     protected:
     private:
         int mNumberOfParameters;
 };
-
-
