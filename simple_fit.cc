@@ -32,10 +32,17 @@ Lownu::Lownu (const char* name, int numPars, double inError)
     _pulls = new RooListProxy("_pulls","_pulls",this);
 
     //Par[numPars+1] is for bkg
-    RooRealVar* Par[numPars+1];
-    for (int i = 0; i < numPars + 1; i++) {
+    //E' = a + b*E_reco
+    //Par[numPars+2] : a
+    //Par[numPars+3] : b
+    RooRealVar* Par[numPars+3];
+    for (int i = 0; i < numPars + 3; i++) {
         if (i == numPars)
             Par[i] = new RooRealVar("background", Form("par%d", i+1), 0, -100, 100);
+        else if (i == numPars + 1)
+            Par[i] = new RooRealVar("a", Form("par%d", i+2), 0, -100, 100);
+        else if (i == numPars + 2)
+            Par[i] = new RooRealVar("b", Form("par%d", i+3), 0, -100, 100);
         else
             Par[i] = new RooRealVar(Form("flux systematic %d", i), Form("par%d", i+1), 0, -100, 100);
         Par[i]->setConstant(false);
@@ -132,6 +139,8 @@ Double_t Lownu::ExtraPull(RooListProxy* _pulls) const
     for(Int_t i = 0; i < this->GetNumberOfParameters() + 1; i++) {
         pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(i))->getVal() - (*pullCV)[i]), 2)/TMath::Power((*pullUnc)[i], 2) ;
     }
+    pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(this->GetNumberOfParameters() + 1))->getVal()), 2) / TMath::Power(0.04, 2);
+    pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(this->GetNumberOfParameters() + 2))->getVal()), 2) / TMath::Power(0.04, 2);
     std::cout << "extra pull penalty: " << pullAdd << std::endl;
     return pullAdd;
 }
@@ -153,6 +162,8 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
         inputTree->GetEntry(event);
         int temp = 0;
         double weight = 0;
+        double a = 0;
+        double b = 0;
         //signal
         //{
         if ((category == 0 || category == 1) && recoNeutronKE < this->mNuCut) {
@@ -166,7 +177,9 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
                 }
                 weight += ((RooAbsReal*)_pulls->at(tempPar))->getVal() * this->syst[tempPar].GetBinContent(temp);
             }
-            predNuE.Fill(recoNuE/1000., 1 + weight);
+            a = ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+1))->getVal();
+            b = gRandom->Gaus(1,(((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+2))->getVal()));
+            predNuE.Fill(a + b * recoNuE/1000., 1 + weight);
         }
         //}
         //bkg
@@ -467,10 +480,6 @@ void Lownu::setEShiftHist(TString file)
     vecEscale = new TVectorD(histEscale->GetNbinsX());
     for(int i=0;i<histEscale->GetNbinsX();i++)
         (*vecEscale)[i] = histEscale->GetBinContent(i+1);
-}
-
-TVectorD* Lownu::getTestVec(){
-    return testVec;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////==========================================9. making short function in Lownu variable============
