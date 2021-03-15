@@ -191,10 +191,10 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
                             temp = tempBin;
                         }
                     }
-                    weight += ((RooAbsReal*)_pulls->at(tempPar))->getVal() * this->syst[tempPar].GetBinContent(temp);
+                    weight *= ((RooAbsReal*)_pulls->at(tempPar))->getVal() * this->syst[tempPar].GetBinContent(temp);
                 }
-                weight += ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+1))->getVal() * this->eScale->GetBinContent(temp);
-                weight += ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+2))->getVal() * this->smearing->GetBinContent(temp);
+                weight *= ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+1))->getVal() * this->eScale->GetBinContent(temp);
+                weight *= ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+2))->getVal() * this->smearing->GetBinContent(temp);
                 predNuE.Fill(recoNuE/1000., 1 + weight);
             }
             //}
