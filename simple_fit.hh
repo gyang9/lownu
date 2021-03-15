@@ -362,7 +362,10 @@ class Lownu : public RooAbsReal {
         float recoNuE;
         float trueNuE;
         int category;
+        int isSecondary;
+        int trackNum;
         float recoNeutronKE;
+        float BDT;
         TTree* inputTree = nullptr;
         std::unique_ptr<TFile> file;
         std::unique_ptr<TFile> fileFluxShifts;
@@ -379,6 +382,14 @@ class Lownu : public RooAbsReal {
 
         TH1D* mData;
         double mError = 0;
+        std::unique_ptr<TMatrixD> makeFolding(double multiplier);
+        std::unique_ptr<TMatrixD> diffFolding(TMatrixD* mat1, TMatrixD* mat2);
+
+        std::vector<TH1D> TEST(RooListProxy* _pulls);
+   TH1D* eScale;
+   TH1D* smearing;
+
+
 
     protected:
     private:

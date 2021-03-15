@@ -19,10 +19,13 @@
 #include <TFrame.h>
 #include <TFile.h>
 
+
 using namespace std;
 
 //kSacling : anti neutrino CC 0pi event for 3DST per year, CDR
-float kScaling = 2.4E+5;
+float kScaling = 2.4E+5; //1year
+const float kCorelation = 0.95;
+TVectorD energyScaleError(16);
 
 Lownu::Lownu (const char* name, int numPars, double inError) 
     : RooAbsReal(name,name)
@@ -35,6 +38,7 @@ Lownu::Lownu (const char* name, int numPars, double inError)
     //E' = a + b*E_reco
     //Par[numPars+2] : a
     //Par[numPars+3] : b
+    
     RooRealVar* Par[numPars+3];
     for (int i = 0; i < numPars + 3; i++) {
         if (i == numPars)
@@ -55,7 +59,8 @@ Lownu::Lownu (const char* name, int numPars, double inError)
 
 Lownu::~Lownu()
 {
-    delete this->_pulls;}
+    delete this->_pulls;
+}
 
 //=================================================================================================================================
 TMatrixD* Lownu::prepareCovMatrix(Int_t nBins, TVectorD* pred) const
@@ -78,9 +83,19 @@ TMatrixD* Lownu::prepareCovMatrix(Int_t nBins, TVectorD* pred) const
     //{
     for(Int_t i = 0; i < nBins ; i++) {
         (*outMat)(i, i) = std::pow(recoUncertainties[i] * (*pred)[i] * kScaling /this->mData->GetEntries(), 2)  
-                          + (*pred)[i] * kScaling / this->mData->GetEntries();    
+                          + (*pred)[i] * kScaling / this->mData->GetEntries()
+                          //+ std::pow(energyScaleError[i], 2)
+                          ;    
         if((*outMat)(i, i) == 0) 
             (*outMat)(i, i) += 0.0000000001;
+    }
+    for(Int_t i = 0; i < nBins ; i++) {
+        for(Int_t j = 0; j < nBins ; j++) {
+            if (i == j) {
+                continue;
+            }
+                (*outMat)(i, j) = kCorelation * std::pow((*outMat)(i,i), 0.5) * std::pow((*outMat)(j,j), 0.5);
+        }
     }
     //}
 
@@ -139,8 +154,8 @@ Double_t Lownu::ExtraPull(RooListProxy* _pulls) const
     for(Int_t i = 0; i < this->GetNumberOfParameters() + 1; i++) {
         pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(i))->getVal() - (*pullCV)[i]), 2)/TMath::Power((*pullUnc)[i], 2) ;
     }
-    pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(this->GetNumberOfParameters() + 1))->getVal()), 2) / TMath::Power(0.04, 2);
-    pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(this->GetNumberOfParameters() + 2))->getVal()), 2) / TMath::Power(0.04, 2);
+    pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(this->GetNumberOfParameters() + 1))->getVal()), 2) / TMath::Power(1, 2);
+    pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(this->GetNumberOfParameters() + 2))->getVal()), 2) / TMath::Power(1, 2);
     std::cout << "extra pull penalty: " << pullAdd << std::endl;
     return pullAdd;
 }
@@ -166,30 +181,61 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
         double b = 0;
         //signal
         //{
-        if ((category == 0 || category == 1) && recoNeutronKE < this->mNuCut) {
-            for (int tempPar = 0; tempPar < this->GetNumberOfParameters(); tempPar++) {
-                for (int tempBin = 1; tempBin < this->syst[tempPar].GetNbinsX() + 1; tempBin++) {
-                    //find corresponding bin, true neutrinoE
-                    if (this->syst[tempPar].GetBinLowEdge(tempBin) + this->syst[tempPar].GetBinWidth(tempBin) > trueNuE/1000. 
-                        && this->syst[tempPar].GetBinLowEdge(tempBin) < trueNuE/1000.) {
-                        temp = tempBin;
+        if (trackNum == 1) {
+            if ((category == 0 || category == 1) && recoNeutronKE < this->mNuCut) {// && isSecondary != 1) {
+                for (int tempPar = 0; tempPar < this->GetNumberOfParameters(); tempPar++) {
+                    for (int tempBin = 1; tempBin < this->syst[tempPar].GetNbinsX() + 1; tempBin++) {
+                        //find corresponding bin, true neutrinoE
+                        if (this->syst[tempPar].GetBinLowEdge(tempBin) + this->syst[tempPar].GetBinWidth(tempBin) > trueNuE/1000. 
+                                && this->syst[tempPar].GetBinLowEdge(tempBin) < trueNuE/1000.) {
+                            temp = tempBin;
+                        }
                     }
+                    weight += ((RooAbsReal*)_pulls->at(tempPar))->getVal() * this->syst[tempPar].GetBinContent(temp);
                 }
-                weight += ((RooAbsReal*)_pulls->at(tempPar))->getVal() * this->syst[tempPar].GetBinContent(temp);
+                weight += ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+1))->getVal() * this->eScale->GetBinContent(temp);
+                weight += ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+2))->getVal() * this->smearing->GetBinContent(temp);
+                predNuE.Fill(recoNuE/1000., 1 + weight);
             }
-            a = ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+1))->getVal();
-            b = gRandom->Gaus(1,(((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+2))->getVal()));
-            predNuE.Fill(a + b * recoNuE/1000., 1 + weight);
+            //}
+
+            //bkg
+            //{
+            if ((category == 2 || category == 3) && recoNeutronKE < this->mNuCut) {
+                //use 100% (1) error for background
+                predNuE.Fill(recoNuE/1000., (1 + ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()))->getVal()) * 2);
+                //predNuE.Fill(recoNuE/1000);
+            }
+            //}
         }
-        //}
-        //bkg
-        //{
-        if ((category == 2 || category == 3) && recoNeutronKE < this->mNuCut) {
-            //use 100% (1) error for background
-            predNuE.Fill(recoNuE/1000., (1 + ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()))->getVal()) * 1);
-        }
-        //}
     }
+    predictionList.push_back(predNuE);
+
+    return predictionList;
+}
+
+std::vector<TH1D> Lownu::TEST(RooListProxy* _pulls)
+{
+    std::vector<TH1D> predictionList;
+    predictionList.clear();
+
+    //using the same number of bins, flux systematic
+    //{
+    int numBins = this->syst[0].GetNbinsX();
+    double minimum = this->syst[0].GetBinLowEdge(1);
+    double maximum = this->syst[0].GetBinLowEdge(numBins) + this->syst[0].GetBinWidth(numBins);
+    TH1D predNuE("", "", numBins, minimum, maximum);
+    //}
+    for (int bin = 0; bin < numBins; ++bin) {
+        double tempBinValue = 0;
+        double tempBinDinominator = 0;
+        for (int ii = 0; ii < this->GetNumberOfParameters(); ++ii) {
+            tempBinValue += std::pow((this->syst[ii].GetBinContent(bin+1) * ((RooRealVar*)_pulls->at(ii))->getError()), 2);
+            tempBinDinominator += std::pow(this->syst[ii].GetBinContent(bin+1), 2);
+        }
+        predNuE.SetBinContent(bin+1, std::pow(tempBinValue, 0.5)/std::pow(tempBinDinominator, 0.5));
+    }
+    //predNuE.Add(&syst[0], ((RooRealVar*)_pulls->at(0))->getError());
     predictionList.push_back(predNuE);
 
     return predictionList;
@@ -205,9 +251,45 @@ void Lownu::SetInputTree(TString fileName)
     this->inputTree->SetBranchAddress("trueNeutrinoE", &trueNuE);
     this->inputTree->SetBranchAddress("category", &category);
     this->inputTree->SetBranchAddress("recoNeutronKE", &recoNeutronKE);
+    this->inputTree->SetBranchAddress("trackNum", &trackNum);
+    //this->inputTree->SetBranchAddress("isSecondary", &isSecondary);
 
     this->mData = new TH1D("mData", "mData", 16, 0, 8);
     this->mFolding = std::make_unique<TMatrixD> (_nBins, _nBins);
+    this->eScale = new TH1D("","energy scale",16,0,8);
+   eScale->SetBinContent(1,-0.1608301);
+   eScale->SetBinContent(2,-0.1064572);
+   eScale->SetBinContent(3,-0.08198026);
+   eScale->SetBinContent(4,-0.06008165);
+   eScale->SetBinContent(5,-0.02177312);
+   eScale->SetBinContent(6,0.01526615);
+   eScale->SetBinContent(7,0.08380262);
+   eScale->SetBinContent(8,0.15233);
+   eScale->SetBinContent(9,0.1639289);
+   eScale->SetBinContent(10,0.213944);
+   eScale->SetBinContent(11,0.1481013);
+   eScale->SetBinContent(12,0.09745763);
+   eScale->SetBinContent(13,0.1262887);
+   eScale->SetBinContent(14,0.03533569);
+   eScale->SetBinContent(15,0.015625);
+   eScale->SetBinContent(16,-0.004651163);
+    this->smearing = new TH1D("unnamed","smearing",16,0,8);
+smearing->SetBinContent(1,-0.05306868);
+   smearing->SetBinContent(2,-0.01210618);
+   smearing->SetBinContent(3,-0.004864977);
+   smearing->SetBinContent(4,-0.00413987);
+   smearing->SetBinContent(5,-0.002425308);
+   smearing->SetBinContent(6,-0.002289431);
+   smearing->SetBinContent(7,-0.004670003);
+   smearing->SetBinContent(8,-0.008615162);
+   smearing->SetBinContent(9,-0.01163406);
+   smearing->SetBinContent(10,-0.03235897);
+   smearing->SetBinContent(11,-0.05162117);
+   smearing->SetBinContent(12,-0.1178922);
+   smearing->SetBinContent(13,-0.1923525);
+   smearing->SetBinContent(14,-0.1187281);
+   smearing->SetBinContent(15,-0.2341523);
+   smearing->SetBinContent(16,-0.06467317);
 
     //for each bin
     double numberOfTrueNuE[_nBins];
@@ -221,24 +303,31 @@ void Lownu::SetInputTree(TString fileName)
 
     for (int i = 0; i < inputTree->GetEntries(); i++) {
         inputTree->GetEntry(i);
-        if (recoNeutronKE < this->mNuCut) {
-            this->mData->Fill(recoNuE/1000.);
-            for (int j = 0; j < _nBins; j++) {
-                if (0.5*j < trueNuE/1000. && trueNuE/1000. < 0.5*(j+1)) {
-                    numberOfTrueNuE[j]++;
-                    for (int k = 0; k < _nBins; k++) {
-                        if (0.5*k < recoNuE/1000. && recoNuE/1000. < 0.5*(k+1)) {
-                            numberOfRecoNuE[j][k]++;
+        if (trackNum == 1) {
+            if (recoNeutronKE < this->mNuCut) {
+                if ((category == 0 || category == 1)) {
+                    this->mData->Fill(recoNuE/1000.);
+                }
+                if (category == 2 || category == 3) {
+                    this->mData->Fill(recoNuE/1000.);
+                }
+
+                for (int j = 0; j < _nBins; j++) {
+                    if (0.5*j < trueNuE/1000. && trueNuE/1000. < 0.5*(j+1)) {
+                        numberOfTrueNuE[j]++;
+                        for (int k = 0; k < _nBins; k++) {
+                            if (0.5*k < recoNuE/1000. && recoNuE/1000. < 0.5*(k+1)) {
+                                numberOfRecoNuE[j][k]++;
+                            }
                         }
                     }
                 }
             }
         }
     }
-
     for(Int_t i = 0; i < _nBins; i++) {
         for(Int_t j = 0; j < _nBins; j++) {
-            (*mFolding)(i, j) = numberOfRecoNuE[j][i]/numberOfTrueNuE[j];
+            (*mFolding)(i, j) = (numberOfRecoNuE[j][i]/numberOfTrueNuE[j]);
         }
     }
 }
