@@ -23,8 +23,8 @@
 using namespace std;
 
 //kSacling : anti neutrino CC 0pi event for 3DST per year, CDR
-float kScaling = 2.4E+5; //1year
-const float kCorelation = 0.95;
+float kScaling = 2.4E+6 * 0.25; //1year
+const float kCorelation = 0.00;
 TVectorD energyScaleError(16);
 
 Lownu::Lownu (const char* name, int numPars, double inError) 
@@ -38,8 +38,9 @@ Lownu::Lownu (const char* name, int numPars, double inError)
     //E' = a + b*E_reco
     //Par[numPars+2] : a
     //Par[numPars+3] : b
+    //Par[numPars+ 4~20] : each energy bin
     
-    RooRealVar* Par[numPars+3];
+    RooRealVar* Par[numPars+3+16];
     for (int i = 0; i < numPars + 3; i++) {
         if (i == numPars)
             Par[i] = new RooRealVar("background", Form("par%d", i+1), 0, -100, 100);
@@ -49,6 +50,11 @@ Lownu::Lownu (const char* name, int numPars, double inError)
             Par[i] = new RooRealVar("b", Form("par%d", i+3), 0, -100, 100);
         else
             Par[i] = new RooRealVar(Form("flux systematic %d", i), Form("par%d", i+1), 0, -100, 100);
+        Par[i]->setConstant(false);
+        _parlist.add(*(Par[i]));
+    }
+    for (int i = numPars + 3; i < numPars + 3 + 16; i++) {
+        Par[i] = new RooRealVar(Form("energy bin %d", i - numPars - 2), Form("par%d", i), 0, -100, 100);
         Par[i]->setConstant(false);
         _parlist.add(*(Par[i]));
     }
@@ -82,10 +88,7 @@ TMatrixD* Lownu::prepareCovMatrix(Int_t nBins, TVectorD* pred) const
     //(i, i) = statistic + cross section uncertainty^2
     //{
     for(Int_t i = 0; i < nBins ; i++) {
-        (*outMat)(i, i) = std::pow(recoUncertainties[i] * (*pred)[i] * kScaling /this->mData->GetEntries(), 2)  
-                          + (*pred)[i] * kScaling / this->mData->GetEntries()
-                          //+ std::pow(energyScaleError[i], 2)
-                          ;    
+        (*outMat)(i, i) = (*pred)[i] * kScaling / this->mData->GetEntries();    
         if((*outMat)(i, i) == 0) 
             (*outMat)(i, i) += 0.0000000001;
     }
@@ -94,7 +97,31 @@ TMatrixD* Lownu::prepareCovMatrix(Int_t nBins, TVectorD* pred) const
             if (i == j) {
                 continue;
             }
-                (*outMat)(i, j) = kCorelation * std::pow((*outMat)(i,i), 0.5) * std::pow((*outMat)(j,j), 0.5);
+            //(*outMat)(i, j) = kCorelation * std::pow((*outMat)(i,i), 0.5) * std::pow((*outMat)(j,j), 0.5);
+        }
+    }
+    //}
+
+    return outMat ;
+}
+
+TMatrixD* Lownu::prepareCovMatrix2(Int_t nBins) const
+{
+    //output covariant matrix
+    TMatrixD* outMat = new TMatrixD(nBins , nBins);
+
+    //only fill diagonal element
+    //(i, i) = cross section uncertainty^2
+    //{
+    for(Int_t i = 0; i < nBins ; i++) {
+        (*outMat)(i, i) = std::pow(mError, 2);
+    }
+    for(Int_t i = 0; i < nBins ; i++) {
+        for(Int_t j = 0; j < nBins ; j++) {
+            if (i == j) {
+                continue;
+            }
+            (*outMat)(i, j) = kCorelation * std::pow((*outMat)(i,i), 0.5) * std::pow((*outMat)(j,j), 0.5);
         }
     }
     //}
@@ -133,7 +160,38 @@ Double_t Lownu::FillEv(RooListProxy* _pulls) const
 
     Double_t currentResult = TMath::Abs(mulVec*(*difference));
 
-    std::cout << "DC12_chi2 sans pull " << currentResult << std::endl;
+    //std::cout << "DC12_chi2 sans pull " << currentResult << std::endl;
+
+    return (Double_t) currentResult; 
+}
+
+Double_t Lownu::FillEv2(RooListProxy* _pulls) const 
+{
+    TVectorD* e_i = new TVectorD(_nBins);
+    TVectorD* centralValue = new TVectorD(_nBins);
+    TVectorD* difference = new TVectorD(_nBins);
+
+    for (Int_t i = 0; i < _nBins; i++) {	 
+        (*e_i)[i] = ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+2+i+1))->getVal();
+    }
+    for (Int_t i = 0; i < _nBins; i++) {
+        (*centralValue)[i] = 0;
+    }
+
+    //e_i - centralValue
+    for (Int_t i = 0; i < _nBins; i++) { 
+        (*difference)[i] = (*e_i)[i] - (*centralValue)[i];
+    }
+
+    TMatrixD* covMat = this->prepareCovMatrix2(_nBins);
+    covMat->Invert();
+
+    TVectorD mulVec(*difference);
+    mulVec *= (*covMat);
+
+    Double_t currentResult = TMath::Abs(mulVec*(*difference));
+
+    //std::cout << "DC12_chi2 sans pull " << currentResult << std::endl;
 
     return (Double_t) currentResult; 
 }
@@ -142,8 +200,12 @@ Double_t Lownu::FillEv(RooListProxy* _pulls) const
 Double_t Lownu::evaluate() const
 { 
     Double_t matPart = this->FillEv(_pulls);//original FillEv is matPart
+    Double_t energyPart = this->FillEv2(_pulls);//(e_i - CV)^T * ( ) * (e_i - CV)
     Double_t extraPull = this->ExtraPull(_pulls);//same variable extraPull
-    Double_t tot = matPart + extraPull; //If needed, add pull terms here.
+    std::cout << "p - d side: " << matPart << std::endl;
+    std::cout << "e - CV side: " << energyPart << std::endl;
+    std::cout << "extraPull: " << extraPull << std::endl;
+    Double_t tot = matPart + energyPart + extraPull; //If needed, add pull terms here.
 
     return tot;
 }
@@ -156,7 +218,9 @@ Double_t Lownu::ExtraPull(RooListProxy* _pulls) const
     }
     pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(this->GetNumberOfParameters() + 1))->getVal()), 2) / TMath::Power(1, 2);
     pullAdd += TMath::Power((((RooAbsReal*)_pulls->at(this->GetNumberOfParameters() + 2))->getVal()), 2) / TMath::Power(1, 2);
-    std::cout << "extra pull penalty: " << pullAdd << std::endl;
+    for(Int_t i = this->GetNumberOfParameters() + 3; i < this->GetNumberOfParameters() + 3 + 16; i++) {
+        pullAdd += TMath::Power(((RooAbsReal*)_pulls->at(i))->getVal() - 0, 2)/TMath::Power(1, 2);
+    }
     return pullAdd;
 }
 
@@ -176,7 +240,8 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
     for (int event = 0; event < this->inputTree->GetEntries(); event++) {
         inputTree->GetEntry(event);
         int temp = 0;
-        double weight = 0;
+        double weight = 1;
+        double weightEnergyBin = 0;
         double a = 0;
         double b = 0;
         //signal
@@ -191,11 +256,12 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
                             temp = tempBin;
                         }
                     }
-                    weight += ((RooAbsReal*)_pulls->at(tempPar))->getVal() * this->syst[tempPar].GetBinContent(temp);
+                    weight *= 1 + ((RooAbsReal*)_pulls->at(tempPar))->getVal() * this->syst[tempPar].GetBinContent(temp);
                 }
-                weight += ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+1))->getVal() * this->eScale->GetBinContent(temp);
-                weight += ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+2))->getVal() * this->smearing->GetBinContent(temp);
-                predNuE.Fill(recoNuE/1000., 1 + weight);
+                //weight *= ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+1))->getVal() * this->eScale->GetBinContent(temp);
+                //weight *= ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+2))->getVal() * this->smearing->GetBinContent(temp);
+                weightEnergyBin = ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()+2+temp))->getVal();
+                predNuE.Fill(recoNuE/1000., (weight) * (1 + weightEnergyBin));
             }
             //}
 
@@ -203,7 +269,7 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
             //{
             if ((category == 2 || category == 3) && recoNeutronKE < this->mNuCut) {
                 //use 100% (1) error for background
-                predNuE.Fill(recoNuE/1000., (1 + ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()))->getVal()) * 2);
+                predNuE.Fill(recoNuE/1000., (1 + ((RooAbsReal*)_pulls->at(this->GetNumberOfParameters()))->getVal()) * 1);
                 //predNuE.Fill(recoNuE/1000);
             }
             //}
@@ -257,39 +323,39 @@ void Lownu::SetInputTree(TString fileName)
     this->mData = new TH1D("mData", "mData", 16, 0, 8);
     this->mFolding = std::make_unique<TMatrixD> (_nBins, _nBins);
     this->eScale = new TH1D("","energy scale",16,0,8);
-   eScale->SetBinContent(1,-0.1608301);
-   eScale->SetBinContent(2,-0.1064572);
-   eScale->SetBinContent(3,-0.08198026);
-   eScale->SetBinContent(4,-0.06008165);
-   eScale->SetBinContent(5,-0.02177312);
-   eScale->SetBinContent(6,0.01526615);
-   eScale->SetBinContent(7,0.08380262);
-   eScale->SetBinContent(8,0.15233);
-   eScale->SetBinContent(9,0.1639289);
-   eScale->SetBinContent(10,0.213944);
-   eScale->SetBinContent(11,0.1481013);
-   eScale->SetBinContent(12,0.09745763);
-   eScale->SetBinContent(13,0.1262887);
-   eScale->SetBinContent(14,0.03533569);
-   eScale->SetBinContent(15,0.015625);
-   eScale->SetBinContent(16,-0.004651163);
+    eScale->SetBinContent(1,-0.1608301);
+    eScale->SetBinContent(2,-0.1064572);
+    eScale->SetBinContent(3,-0.08198026);
+    eScale->SetBinContent(4,-0.06008165);
+    eScale->SetBinContent(5,-0.02177312);
+    eScale->SetBinContent(6,0.01526615);
+    eScale->SetBinContent(7,0.08380262);
+    eScale->SetBinContent(8,0.15233);
+    eScale->SetBinContent(9,0.1639289);
+    eScale->SetBinContent(10,0.213944);
+    eScale->SetBinContent(11,0.1481013);
+    eScale->SetBinContent(12,0.09745763);
+    eScale->SetBinContent(13,0.1262887);
+    eScale->SetBinContent(14,0.03533569);
+    eScale->SetBinContent(15,0.015625);
+    eScale->SetBinContent(16,-0.004651163);
     this->smearing = new TH1D("unnamed","smearing",16,0,8);
-smearing->SetBinContent(1,-0.05306868);
-   smearing->SetBinContent(2,-0.01210618);
-   smearing->SetBinContent(3,-0.004864977);
-   smearing->SetBinContent(4,-0.00413987);
-   smearing->SetBinContent(5,-0.002425308);
-   smearing->SetBinContent(6,-0.002289431);
-   smearing->SetBinContent(7,-0.004670003);
-   smearing->SetBinContent(8,-0.008615162);
-   smearing->SetBinContent(9,-0.01163406);
-   smearing->SetBinContent(10,-0.03235897);
-   smearing->SetBinContent(11,-0.05162117);
-   smearing->SetBinContent(12,-0.1178922);
-   smearing->SetBinContent(13,-0.1923525);
-   smearing->SetBinContent(14,-0.1187281);
-   smearing->SetBinContent(15,-0.2341523);
-   smearing->SetBinContent(16,-0.06467317);
+    smearing->SetBinContent(1,-0.05306868);
+    smearing->SetBinContent(2,-0.01210618);
+    smearing->SetBinContent(3,-0.004864977);
+    smearing->SetBinContent(4,-0.00413987);
+    smearing->SetBinContent(5,-0.002425308);
+    smearing->SetBinContent(6,-0.002289431);
+    smearing->SetBinContent(7,-0.004670003);
+    smearing->SetBinContent(8,-0.008615162);
+    smearing->SetBinContent(9,-0.01163406);
+    smearing->SetBinContent(10,-0.03235897);
+    smearing->SetBinContent(11,-0.05162117);
+    smearing->SetBinContent(12,-0.1178922);
+    smearing->SetBinContent(13,-0.1923525);
+    smearing->SetBinContent(14,-0.1187281);
+    smearing->SetBinContent(15,-0.2341523);
+    smearing->SetBinContent(16,-0.06467317);
 
     //for each bin
     double numberOfTrueNuE[_nBins];

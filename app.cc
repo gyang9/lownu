@@ -190,51 +190,51 @@ int main(int argc, char**argv) {
     //}
 
     //for(int i = 0; i < 3; ++i) {
-        //loop(numPar, 0.20 * (i));
+    //loop(numPar, 0.20 * (i));
     //}
 
-      gROOT->SetStyle("Plain");
-  gStyle->SetTitleBorderSize(0);
-  gStyle->SetOptStat("");
+    gROOT->SetStyle("Plain");
+    gStyle->SetTitleBorderSize(0);
+    gStyle->SetOptStat("");
 
-  gStyle->SetLabelFont(102,"");
-  gStyle->SetLabelSize(0.06,"");
-  gStyle->SetLabelFont(102,"xyz");
-  gStyle->SetLabelSize(0.04,"xyz");
-  gStyle->SetLabelOffset(0.001,"x");
-  gStyle->SetLabelOffset(0.01,"y");
+    gStyle->SetLabelFont(102,"");
+    gStyle->SetLabelSize(0.06,"");
+    gStyle->SetLabelFont(102,"xyz");
+    gStyle->SetLabelSize(0.04,"xyz");
+    gStyle->SetLabelOffset(0.001,"x");
+    gStyle->SetLabelOffset(0.01,"y");
 
-  gStyle->SetTitleFont(42,"xyz");
-  gStyle->SetTitleFontSize(0.06);
-  gStyle->SetTitleFont(42);
-  gStyle->SetTitleSize(0.06,"xyz");
-  gStyle->SetTitleOffset(0.9,"x");
-  gStyle->SetTitleOffset(1.2,"y");
+    gStyle->SetTitleFont(42,"xyz");
+    gStyle->SetTitleFontSize(0.06);
+    gStyle->SetTitleFont(42);
+    gStyle->SetTitleSize(0.06,"xyz");
+    gStyle->SetTitleOffset(0.9,"x");
+    gStyle->SetTitleOffset(1.2,"y");
 
-  gStyle->SetStripDecimals(kFALSE);
+    gStyle->SetStripDecimals(kFALSE);
 
-  gStyle->SetPadLeftMargin(0.15);
-  gStyle->SetPadBottomMargin(0.15);
+    gStyle->SetPadLeftMargin(0.15);
+    gStyle->SetPadBottomMargin(0.15);
 
-  gStyle->SetStatW(0.35);
-  gStyle->SetStatH(0.25);
+    gStyle->SetStatW(0.35);
+    gStyle->SetStatH(0.25);
 
-  gStyle->SetPadTickX(kTRUE);
-  gStyle->SetPadTickY(kTRUE);
+    gStyle->SetPadTickX(kTRUE);
+    gStyle->SetPadTickY(kTRUE);
 
-  gStyle->SetPalette(1);
-  gStyle->SetNumberContours(99);
+    gStyle->SetPalette(1);
+    gStyle->SetNumberContours(99);
 
-  gStyle->SetHistLineWidth(2);
-  gStyle->SetFrameLineWidth(2);
-  gStyle->SetFuncWidth(2);
+    gStyle->SetHistLineWidth(2);
+    gStyle->SetFrameLineWidth(2);
+    gStyle->SetFuncWidth(2);
 
-  gStyle->SetStatFont(42);
-  gStyle->SetOptFit(1111);
-  gStyle->SetOptStat(0);
-  gStyle->SetOptStat(000000);
+    gStyle->SetStatFont(42);
+    gStyle->SetOptFit(1111);
+    gStyle->SetOptStat(0);
+    gStyle->SetOptStat(000000);
 
-    loop(numPar, 0.);
+    //loop(numPar, 0.);
     loop(numPar, 0.1);
     TLegend l;
 
@@ -245,16 +245,16 @@ int main(int argc, char**argv) {
     histVec.at(0).SetMaximum(1);
     histVec.at(0).SetLineColor(1);
     histVec.at(0).Draw();
-    l.AddEntry(&histVec.at(0), "0%");
+    l.AddEntry(&histVec.at(0), "10%");
     histVec.at(0).SetLineColor(2);
     histVec.at(0).Draw("same");
-    l.AddEntry(&histVec.at(1), "10%");
-    histVec.at(1).SetLineColor(6);
-    histVec.at(1).Draw("same");
+    //l.AddEntry(&histVec.at(1), "10%");
+    //histVec.at(1).SetLineColor(6);
+    //histVec.at(1).Draw("same");
     //for(int i = 0; i < 2; ++i) {
-        //l.AddEntry(&histVec.at(i), Form("%d",5*i));
-        //histVec.at(i).SetLineColor(kViolet+i);
-        //histVec.at(i).Draw("same");
+    //l.AddEntry(&histVec.at(i), Form("%d",5*i));
+    //histVec.at(i).SetLineColor(kViolet+i);
+    //histVec.at(i).Draw("same");
     //}
     l.Draw();
     can5.SaveAs("3_lownu_uncertainty5.pdf");

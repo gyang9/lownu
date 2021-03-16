@@ -104,6 +104,7 @@ class Lownu : public RooAbsReal {
         RooFormulaVar* Chi2() ;
 
         Double_t FillEv(RooListProxy* _pulls) const;
+        Double_t FillEv2(RooListProxy* _pulls) const;
 
         Double_t ExtraPull(RooListProxy* _pulls) const;
 
@@ -165,6 +166,7 @@ class Lownu : public RooAbsReal {
         TMatrixD* prepareJunoCovMatrix(Int_t nBins, TMatrixD* covM_JUNO, TVectorD* fVec_JUNO) const;
 
         TMatrixD* prepareCovMatrix(Int_t nBins, TVectorD* fVec) const;
+        TMatrixD* prepareCovMatrix2(Int_t nBins) const;
 
         Double_t getPar(int i) ;
         void DataSwitch(Bool_t dataSwitch=true) const;
