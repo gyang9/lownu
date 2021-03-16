@@ -117,18 +117,18 @@ class Lownu : public RooAbsReal {
         float mNuCut;
         float recoNuE;
         float trueNuE;
-        int category;
-        int isSecondary;
-        int trackNum;
         float recoNeutronKE;
-        float BDT;
+        int category;
+        int trackNum;
+
         TTree* inputTree = nullptr;
-        std::unique_ptr<TFile> file;
-        std::unique_ptr<TFile> fileFluxShifts;
+        std::unique_ptr<TFile> dataFile;
+        std::unique_ptr<TFile> covRootFile;
 
         TH1D* mData;
-        double mError = 0;
+        double mLownuCrossSectionError = 0;
 
         TMatrixD* covMatrix;
+        TMatrixD* RHC_chol_diag_nom_mat;
 };
 

@@ -39,7 +39,12 @@ int main(int argc, char**argv) {
     res = m.save();
     double bestFit = res->minNll();
 
-    for (int i = 16; i < 16 + 19; ++i) {
-        std::cout << ((RooRealVar*)rep->_pulls->at(i))->getError() / *(rep->covMatrix)(i,i) << std::endl;
+    TH1D* test = new TH1D("","fi/RHC_chol_diag_nom_mat",19,0,19);
+    for (int i = 0; i < 19; ++i) {
+        test->SetBinContent(i+1, ((RooRealVar*)rep->_pulls->at(16 + i))->getError() / (*(rep->RHC_chol_diag_nom_mat))(i,i));
     }
+
+    TCanvas can;
+    test->Draw();
+    can.SaveAs("test.pdf");
 }

@@ -29,7 +29,7 @@ const int kNumberOfEnergyBin = 16;
 
 Lownu::Lownu (const char* name, double inError) 
     : RooAbsReal(name,name)
-    , mError(inError)
+    , mLownuCrossSectionError(inError)
 {
     _pulls = new RooListProxy("_pulls","_pulls",this);
 
@@ -218,7 +218,7 @@ TMatrixD* Lownu::prepareCovMatrix2(Int_t nBins) const
     //(i, i) = cross section uncertainty^2
     //(i, j) = correlation
     for(Int_t i = 0; i < nBins ; i++) {
-        (*outMat)(i, i) = std::pow(mError, 2);
+        (*outMat)(i, i) = std::pow(mLownuCrossSectionError, 2);
     }
     for(Int_t i = 0; i < nBins ; i++) {
         for(Int_t j = 0; j < nBins ; j++) {
@@ -276,8 +276,8 @@ Double_t Lownu::evaluate() const
 
 void Lownu::SetInputTree(TString fileName)
 {
-    file = std::make_unique<TFile> (fileName);  
-    this->inputTree = (TTree*)file.get()->Get("tree");
+    dataFile = std::make_unique<TFile> (fileName);  
+    this->inputTree = (TTree*)dataFile.get()->Get("tree");
     if (!inputTree)
         throw std::runtime_error("invalid input");
     this->inputTree->SetBranchAddress("recoNeutrinoE", &recoNuE);
@@ -297,12 +297,16 @@ void Lownu::SetInputTree(TString fileName)
 }
 void Lownu::SetInputSyst(TString fileName)
 {
-    fileFluxShifts = std::make_unique<TFile> (fileName);
-    TMatrixD* inputMatrix = (TMatrixD*)fileFluxShifts.get()->Get("RHC_cov_nom_mat");
+    covRootFile = std::make_unique<TFile> (fileName);
+    TMatrixD* RHC_cov_nom_mat = (TMatrixD*)covRootFile.get()->Get("RHC_cov_nom_mat");
+    TMatrixD* RHC_cov_shp_mat = (TMatrixD*)covRootFile.get()->Get("RHC_cov_shp_mat");
+    TMatrixD* input_RHC_chol_diag_nom_mat = (TMatrixD*)covRootFile.get()->Get("RHC_chol_diag_nom_mat");
     this->covMatrix = new TMatrixD(19, 19);
+    this->RHC_chol_diag_nom_mat = new TMatrixD(19, 19);
     for (int i = 0; i < 19; ++i) {
         for (int j = 0; j < 19; ++j) {
-            (*(this->covMatrix))(i, j) = (*inputMatrix)(i + 19, j + 19);
+            (*(this->covMatrix))(i, j) = (*RHC_cov_nom_mat)(i + 19, j + 19) + (*RHC_cov_shp_mat)(i + 19, j + 19);
+            (*(this->RHC_chol_diag_nom_mat))(i,i) = (*input_RHC_chol_diag_nom_mat)(i + 19, i + 19);
         }
     }
 }
