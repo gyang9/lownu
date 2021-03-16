@@ -88,278 +88,32 @@ class Lownu : public RooAbsReal {
 
     public:
 
-        Lownu (const char* name, int numPars, double inError);
+        Lownu (const char* name, double inError);
 
         Lownu (const Lownu & other, const char* name = 0)
             : RooAbsReal(other,name) {};
         virtual TObject* clone(const char* newname) const {return new Lownu (*this, newname);};
         virtual ~Lownu () ;
+        virtual  Double_t evaluate() const ;
 
         Lownu (const Lownu& Lownu);
 
-        void randomGo(int newIsotope, RooListProxy* _pulls);
-
         Lownu & operator=(const Lownu & rhs);
-
-        RooFormulaVar* Chi2() ;
+        void SetInputTree(TString fileName);
+        void SetInputSyst(TString fileName);
 
         Double_t FillEv(RooListProxy* _pulls) const;
         Double_t FillEv2(RooListProxy* _pulls) const;
-
-        Double_t ExtraPull(RooListProxy* _pulls) const;
-
-        TMatrixD* prepareMatrix(TH2D* conv) const;
-
-        void setSyst(Double_t syst) ;
-        void setAtmBaseline(Double_t AtmBaseline) ;
-        void setDensity(Double_t Density) ;
-
-        void setBaselineDYB(Double_t bl) ;
-        void setBaselineDC(Double_t bl) ;
-        void setBaselineRENO(Double_t bl) ;
-        void setBaselineNEOS(Double_t bl) ;
-        void setBaselinePROS(Double_t bl) ;
-
-        void setNBins(Double_t Bins) ;
-        void setTime(Double_t time) ;
-        void setCorr1(Double_t Corr1) ;
-        void setCorr2(Double_t Corr2) ;
-        void setCorr3(Double_t Corr3) ;
-        void setCorr4(Double_t Corr4) ;
-
-        void setdm2CV(Double_t dm2CV) ;
-        void setdm2Unc(Double_t dm2Unc) ;
-
-        void setData(RooListProxy* _pulls) const;
-        void setSysts(bool inSyst);
-
-        void setPull(TH1D* pullvecCV) ;
-        void setPullUnc(TH1D* pullvecUnc) ;
-        Double_t getPullUnc(Int_t pN) ;
-        void addSK(Bool_t wSK) ;
-
-        void SetBinning(TH1D* binHist) ;
-        void SetFissionFraction(TH1D* fissionHist) ;
-        void SetMatrixNameDYB(TString matrixNameDYB);
-        void SetMatrixNameDC(TString matrixNameDC);
-        void SetMatrixNameRENO(TString matrixNameRENO);
-        void SetMatrixNameNEOS(TString matrixNameNEOS);
-        void SetMatrixNamePROS(TString matrixNamePROS);
-        void SetInputName(TString fileName);
-
-        void SetModelList(std::vector<TString>);
-
-        TMatrixD* prepareCovMatrix(TH2D* conv, TVectorD* vec, Double_t syst) const;
-
-        std::vector<TH1D> prepareData(std::vector<TH1D> tempPredLis) const;
-        //std::vector<std::vector<float>> preparePrediction(RooListProxy* _pulls, bool Iosc ) const;
-        std::vector<TH1D> preparePrediction(RooListProxy* _pulls, bool Iosc ) const;
-        std::vector<double> wonseokPreparePrediction;//(RooListProxy* _pulls, bool Iosc ) const;//May,20,2020
-
-        //std::vector<double> histForScale;//May,20,2020
-        //double scalingForNEOS;//May,20,2020
-
-        TMatrixD* prepareT2kCovMatrix(TMatrixD* covM_t2k, TVectorD* fVec_t2k) const;
-        TMatrixD* prepareT2kCovMatrix(TMatrixD* covM_t2k, TVectorD* fVec_t2k, Int_t nBins) const;
-        TMatrixD* prepareT2kCovMatrixND(TMatrixD* covM_t2k, TVectorD* fVec_t2k, TVectorD* fVec_t2k_nd, Int_t nBins) const;
-        TMatrixD* prepareSkCovMatrix(TMatrixD* covM_sk, TVectorD* fVec_sk) const;
-        TMatrixD* prepareJunoCovMatrix(Int_t nBins, TMatrixD* covM_JUNO, TVectorD* fVec_JUNO) const;
-
+        Double_t FillEv3(RooListProxy* _pulls) const;
         TMatrixD* prepareCovMatrix(Int_t nBins, TVectorD* fVec) const;
         TMatrixD* prepareCovMatrix2(Int_t nBins) const;
+        TMatrixD* prepareCovMatrix3() const;
 
-        Double_t getPar(int i) ;
-        void DataSwitch(Bool_t dataSwitch=true) const;
-        Bool_t getDataSwitch() const;
-
-        Double_t surv_t2k(Double_t L, Double_t E, RooListProxy* _pulls) const ;
-        Double_t app_t2k(Double_t L, Double_t E, Double_t density, RooListProxy* _pulls) const ;
-        Double_t survNue_sk(Double_t L, Double_t E, Double_t density, RooListProxy* _pulls) const ;
-        Double_t survNumu_sk(Double_t L, Double_t E, RooListProxy* _pulls) const ;
-
-        Double_t surv_t2k(Double_t L, Double_t E, TVectorD* parVec) const ;
-        Double_t app_t2k(Double_t L, Double_t E, Double_t density, TVectorD* parVec) const ;
-        Double_t survNue_sk(Double_t L, Double_t E, Double_t density, TVectorD* parVec) const ;
-        Double_t survNumu_sk(Double_t L, Double_t E, TVectorD* parVec) const ;
-
-        Double_t surv_JUNO(Double_t E, RooListProxy* _pulls) const ;
-        Double_t surv_JUNO(Double_t E, TVectorD* parVec) const ;
-
-        Double_t surv_JUNO(Double_t E, RooListProxy* _pulls, Double_t L) const ;
-        Double_t surv_JUNO(Double_t E, TVectorD* parVec, Double_t L) const ;
-
-        TF1* fitting_function;//June
-        Double_t surv_Prob(Double_t E, RooListProxy* _pulls, Double_t L, TF1* func ) const ;
-        //Double_t surv_Prob(Double_t E, RooListProxy* _pulls, Double_t L ) const ;
-        //TF1* getFittingFunction();
-        //void setFittingFunction(TF1*);
-
-        RooRealVar* getParVar(int i) ;
-        RooListProxy* getParVar() ;
-        RooListProxy* getPullList() const;
-
-        TVectorD* getSkVec() ;
-        TVectorD* getT2kVec() ;
-        TVectorD* getJunoVec() ;
-        TVectorD* getJunoData() ;
-
-        TH1D* getJunoHist() ;
-        TH1D* getJunoDataHist() ;
+        std::vector<TH1D> preparePrediction(RooListProxy* _pulls, bool Iosc ) const;
 
         RooArgList _parlist;
         RooListProxy* _pulls;
 
-        std::vector<TH1D> GetCurrentPrediction(); 
-        std::vector<TH1D> GetCurrentData(std::vector<TH1D> pred);
-
-        TF1* GetIBDXsecFormula() const;
-        TGraph* GetIBDXsecPoints() const;
-        std::vector<TH1D*> GetFluxPrediction(RooListProxy* _pulls, bool Iosc) ;
-
-        //std::vector<TMatrixD*> ConversionMatrix(TString inputFile, TString inputTree);
-        TMatrixD* ConversionMatrix(TString inputFile, TString inputTree);
-        //TH2D* GetConversionHist() const {return fHist[0];}//need
-        TH2D* GetConversionHist() const {return fHist;}//need
-        //std::vector<TMatrixD*> GetConversionMatrix() const {return fMatrix;}//need
-        TMatrixD* GetConversionMatrix() const {return fMatrix;}//need
-        //TH1D* folding(TH1D* input, int something) const;
-        TH1D* folding(TH1D* input) const;
-        TVectorD* getTestVec();//May,20,2020
-        Double_t getScaling4();//June,3,2020
-        void fitSingleExp(TString input);
-
-        void ifEqualIso(bool iso = false);
-        bool GetEqualIso();
-        bool GetSysts();
-
-        void setFileLocation(TString fileL);
-
-        void ifEShiftHist(bool eshifthist);
-        void setEShiftHist(TString file);
-        bool getIfEShiftHist();
-
-        //TH2D* fHist[5];
-        TH2D* fHist;
-        //TH2D* fHist_DC;
-        //TH2D* fHist_DYB;
-        //TH2D* fHist_RENO;
-        //TH2D* fHist_NEOS;
-        //TH2D* fHist_PROS;
-
-        //std::vector<TMatrixD*> fMatrix;
-        TMatrixD* fMatrix;
-        //TMatrixD* fMatrix_DC;
-        //TMatrixD* fMatrix_DYB;
-        //TMatrixD* fMatrix_RENO;
-        //TMatrixD* fMatrix_NEOS;
-        //TMatrixD* fMatrix_PROS;
-
-        //std::vector<TMatrixD*> uMatrix;
-        TMatrixD* uMatrix;
-        //TMatrixD* uMatrix_DC;
-        //TMatrixD* uMatrix_DYB;
-        //TMatrixD* uMatrix_RENO;
-        //TMatrixD* uMatrix_NEOS;
-        //TMatrixD* uMatrix_PROS;
-
-        TMatrixD* unfoldingMatrix;
-
-        TH2D* conv;
-        TH1D* nueAfter;
-        TH1D* nueBefore;
-        TH1D* numuTrue;
-
-        Double_t _syst;
-        Double_t _dm2CV;
-        Double_t _dm2Unc;
-
-        Double_t _Density;
-        Double_t _AtmBaseline;
-        Double_t _time;
-        Double_t _Bins;
-        Double_t _Corr1;
-        Double_t _Corr2;
-        Double_t _Corr3;
-        Double_t _Corr4;
-        Double_t dataSet;
-        Bool_t _dataSwitch;
-
-        TVectorD* pullCV; 
-        TVectorD* pullUnc;
-        TVectorD* fData_t2k;
-        TVectorD* fData_sk;
-        TVectorD* fData_JUNO;
-
-        TVectorD* fVec_t2k;
-        TVectorD* fVec_t2k_nd;
-        TVectorD* fVec_sk;
-        TVectorD* fVec_JUNO;
-        TVectorD* fVecShadow_JUNO;
-
-        TVectorD* MCDelegate;
-        TVectorD* dataDelegate;
-
-        TH1D* hData_JUNO;
-        TH1D* hShadow_JUNO;
-
-        Bool_t withSK ;
-
-        TString fileName;
-        TString fileNameRENO;
-        TString fileNameNEOS;
-        TString fileNameDC;
-        TString fileNameDYB;
-        TString fileNamePROS;
-        TString ffileName;
-        double fissionFraction[100];
-        double binEdge[100];
-        Int_t  _nBins;
-        int newBin = 60; //new
-        int newBin_DCDYB = 24; //new
-        int newBin_RENO = 26; //new
-        int newBin_NEOS = 61; //new
-        int newBin_PROS = 29; //new
-        int newBin_total = newBin_DCDYB + newBin_DCDYB + newBin_RENO + newBin_NEOS + newBin_PROS;//new
-        double binWidth = 0.125; //new
-        /*
-           Double_t prob[10000];//May,30,2020 : 1000 oscillation in surv_Prob function
-           double scaling44=123.456;//June,3,2020 : Print out Scaling4
-           double predNEOS2[100];//new
-           Double_t thisE_NEOS;//new
-           */
-        TString singleExp;
-        double baselineDC;
-        double baselineDYB;
-        double baselineRENO;
-        double baselineNEOS;
-        double baselinePROS;
-
-        bool inSyst;
-        bool equalIso;
-        TString fileLocation;
-
-        bool ifEHist ;
-        TString EHistFile ;
-        TVectorD* vecEscale;    
-
-        //TH1D* dataDC;
-        TH1D* dataDYB;
-        TH1D* dataRENO;
-        TH1D* dataNEOS;
-        TH1D* dataPROS;
-        //TH1D* predDC;
-        //TH1D* predDYB;
-        //TH1D* predRENO;
-        //TH1D* predNEOS;
-
-        std::vector<TString> modelList;
-
-        std::vector<TH1D*> dataList;
-        //double scaling4=123.456;//June,3,2020
-
-        /**
-         * @brief low nu cut, MeV
-         */
         float mNuCut;
         float recoNuE;
         float trueNuE;
@@ -371,29 +125,10 @@ class Lownu : public RooAbsReal {
         TTree* inputTree = nullptr;
         std::unique_ptr<TFile> file;
         std::unique_ptr<TFile> fileFluxShifts;
-        std::vector<TH1D> syst;
-        void SetInputTree(TString fileName);
-        void SetInputSyst(TString fileName);
-
-        void SetNumberOfParameters(int inNum);
-        const int GetNumberOfParameters() const;
-
-        virtual  Double_t evaluate() const ;
-
-        std::unique_ptr<TMatrixD> mFolding;
 
         TH1D* mData;
         double mError = 0;
-        std::unique_ptr<TMatrixD> makeFolding(double multiplier);
-        std::unique_ptr<TMatrixD> diffFolding(TMatrixD* mat1, TMatrixD* mat2);
 
-        std::vector<TH1D> TEST(RooListProxy* _pulls);
-   TH1D* eScale;
-   TH1D* smearing;
-
-
-
-    protected:
-    private:
-        int mNumberOfParameters;
+        TMatrixD* covMatrix;
 };
+
