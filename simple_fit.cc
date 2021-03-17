@@ -24,7 +24,7 @@ using namespace std;
 
 //kSacling : anti neutrino CC 0pi event for 3DST per year, CDR
 float kScaling = 2.4E+6 * 0.25; //1year
-const float kCorelation = 0.00;
+const float kCorelation = 0.95;
 const int kNumberOfEnergyBin = 16;
 
 Lownu::Lownu (const char* name, double inError) 
@@ -83,32 +83,32 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
                     }
                 }
                 //0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 7, 8, 12, 16, 20, 40, 116
-                for (int tempBin = 0; tempBin < 11; tempBin++) {
+                for (int tempBin = 0; tempBin < 12; tempBin++) {
                     //find corresponding bin, true neutrinoE
                     if ((tempBin + 1) * 0.5 > trueNuE/1000. && tempBin * 0.5 < trueNuE/1000.) {
                         temp2 = tempBin;
                     }
                 }
                 if (7 > trueNuE/1000. && 6 < trueNuE/1000.) {
-                    temp2 = 13;
+                    temp2 = 12;
                 }
                 if (8 > trueNuE/1000. && 7 < trueNuE/1000.) {
-                    temp2 = 14;
+                    temp2 = 13;
                 }
                 if (12 > trueNuE/1000. && 8 < trueNuE/1000.) {
-                    temp2 = 15;
+                    temp2 = 14;
                 }
                 if (16 > trueNuE/1000. && 12 < trueNuE/1000.) {
-                    temp2 = 16;
+                    temp2 = 15;
                 }
                 if (20 > trueNuE/1000. && 16 < trueNuE/1000.) {
-                    temp2 = 17;
+                    temp2 = 16;
                 }
                 if (40 > trueNuE/1000. && 20 < trueNuE/1000.) {
-                    temp2 = 18;
+                    temp2 = 17;
                 }
                 if (116 > trueNuE/1000. && 40 < trueNuE/1000.) {
-                    temp2 = 19;
+                    temp2 = 18;
                 }
                 weight = ((RooAbsReal*)_pulls->at(temp))->getVal();
                 weight2 = ((RooAbsReal*)_pulls->at(kNumberOfEnergyBin + temp2))->getVal();
@@ -121,6 +121,7 @@ std::vector<TH1D> Lownu::preparePrediction(RooListProxy* _pulls, bool Iosc) cons
             if ((category == 2 || category == 3) && recoNeutronKE < this->mNuCut) {
                 //use 100% (1) error for background
                 predNuE.Fill(recoNuE/1000., (1 + ((RooAbsReal*)_pulls->at(kNumberOfEnergyBin + 19))->getVal()) * 1);
+                //predNuE.Fill(recoNuE/1000.);
             }
             //}
         }
@@ -154,7 +155,8 @@ Double_t Lownu::FillEv(RooListProxy* _pulls) const
         (*difference)[i] = kScaling/this->mData->GetEntries() * ((*pred)[i] - (*fData)[i]);
     }
 
-    TMatrixD* covMat = this->prepareCovMatrix(kNumberOfEnergyBin, pred);
+    TMatrixD* covMat = new TMatrixD(kNumberOfEnergyBin, kNumberOfEnergyBin);
+    *covMat = *(this->prepareCovMatrix(kNumberOfEnergyBin, pred));
     covMat->Invert();
 
     TVectorD mulVec(*difference);
@@ -163,6 +165,7 @@ Double_t Lownu::FillEv(RooListProxy* _pulls) const
     Double_t currentResult = TMath::Abs(mulVec*(*difference));
 
     //std::cout << "DC12_chi2 sans pull " << currentResult << std::endl;
+    //
 
     return (Double_t) currentResult; 
 }
@@ -200,7 +203,8 @@ Double_t Lownu::FillEv2(RooListProxy* _pulls) const
         (*difference)[i] = (*e_i)[i] - (*centralValue)[i];
     }
 
-    TMatrixD* covMat = this->prepareCovMatrix2(kNumberOfEnergyBin);
+    TMatrixD* covMat = new TMatrixD(kNumberOfEnergyBin, kNumberOfEnergyBin);
+    *covMat = *(this->prepareCovMatrix2(kNumberOfEnergyBin));
     covMat->Invert();
 
     TVectorD mulVec(*difference);
@@ -250,7 +254,10 @@ Double_t Lownu::FillEv3(RooListProxy* _pulls) const
         (*difference)[i] = (*f_i)[i] - (*centralValue)[i];
     }
 
-    TMatrixD* covMat = this->covMatrix;
+    TMatrixD* covMat = new TMatrixD(19, 19);
+    *covMat = *(this->covMatrix);
+    std::cout << "14 element: " << (*covMat)(14, 14) << std::endl;
+    std::cout << "1 element: " << (*covMat)(1, 1) << std::endl;
     covMat->Invert();
 
     TVectorD mulVec(*difference);
@@ -266,10 +273,18 @@ Double_t Lownu::evaluate() const
     Double_t part1 = this->FillEv(_pulls);  //P-D
     Double_t part2 = this->FillEv2(_pulls); //e-CV
     Double_t part3 = this->FillEv3(_pulls); //f-CV
+    std::cout << "--------------------------" << std::endl;
+    for (int i = 0; i < kNumberOfEnergyBin; ++i) {
+        std::cout << "e" << i << ": " << ((RooAbsReal*)_pulls->at(i))->getVal() << std::endl;
+    }
+    for (int i = 0; i < 19; ++i) {
+        std::cout << "f" << i << ": " << ((RooAbsReal*)_pulls->at(kNumberOfEnergyBin + i))->getVal() << std::endl;
+    }
+        std::cout << "bkg: " << ((RooAbsReal*)_pulls->at(kNumberOfEnergyBin + 19))->getVal() << std::endl;
     std::cout << "p - d: " << part1 << std::endl;
     std::cout << "e - CV: " << part2 << std::endl;
     std::cout << "f - CV: " << part3 << std::endl;
-    Double_t tot = part1 + part2 + part3;
+    Double_t tot = part1 + part2 + part3 + ((RooAbsReal*)_pulls->at(kNumberOfEnergyBin + 19))->getVal();
 
     return tot;
 }
